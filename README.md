@@ -23,3 +23,12 @@ CastX is an open-source Android screen mirroring solution with two operating mod
 2. Launch CastX and grant necessary permissions
 3. Tap "Start Server"
 4. Access the control panel from any browser at:
+
+
+## 💻 Desktop Mode - Computer Installation
+1. Install the CastX desktop application
+2. Connect target Android device via USB or Wi-Fi
+3. Enable USB debugging on the Android device
+4. Launch CastX Desktop
+5. Select device from detected list
+6. Control device with keyboard/mouse

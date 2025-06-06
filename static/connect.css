@@ -1,0 +1,183 @@
+   /* 新增样式 */
+   .connection-status {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 8px 15px;
+    background: #ff4444;
+    color: white;
+    border-radius: 15px;
+    z-index: 10000;
+  }
+  
+  .connection-status.connected {
+    background: #00C851;
+  }
+  
+  .side-menu-trigger {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(127,128,127,0.7);
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 9999;
+  }
+  
+  .side-menu {
+    position: fixed;
+    left: -300px;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+    z-index: 10000;
+  }
+  
+  .side-menu.active {
+    left: 0;
+  }
+  
+  .menu-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  .connection-types {
+    display: flex;
+    padding: 10px;
+  }
+  
+  .connection-types button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: #f0f0f0;
+    cursor: pointer;
+  }
+  
+  .connection-types button.active {
+    background: #2196F3;
+    color: white;
+  }
+  
+  .menu-content {
+    padding: 15px;
+  }
+  
+ .usb-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+ .usb-item button {
+    margin-left: 5px;
+    padding: 5px 10px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+
+  /* 新增样式 */
+.connection-form {
+    padding: 15px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 14px;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  .connect-btn {
+    width: 100%;
+    padding: 10px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  .connect-btn:hover {
+    background: #0056b3;
+  }
+
+  /* 输入组布局 */
+.input-group {
+    margin: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .input-label {
+    min-width: 80px;
+    text-align: right;
+    color: #fff;
+  }
+  
+  .input-field {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #666;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.9);
+  }
+  
+  /* 认证按钮组 */
+  .auth-check {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: flex-end;
+  }
+  
+  .connect-btn {
+    padding: 8px 20px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  .connect-btn:hover {
+    background: #45a049;
+  }
+
+  

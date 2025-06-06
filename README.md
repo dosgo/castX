@@ -1,6 +1,6 @@
 # CastX - Android Screen Mirroring & Control
 
-**English** | [中文](#CastX---安卓投屏控制工具)
+[View in Chinese](README_zh.md)|[中文文档](README_zh.md)
 
 CastX is an open-source Android screen mirroring solution with two operating modes:
 1. **Device Mode**: Run on an Android device to enable browser-based control via HTTP/WebRTC in your local network
@@ -22,7 +22,11 @@ CastX is an open-source Android screen mirroring solution with two operating mod
 1. Install the APK on your Android device
 2. Launch CastX and grant necessary permissions
 3. Tap "Start Server"
-4. Access the control panel from any browser at:
+4. Access the control panel from any browser at:http://:8080
+5. Use the web interface to:
+   - View device screen in real-time
+   - Send touch events and gestures
+   - Control volume and power states
 
 
 ## 💻 Desktop Mode - Computer Installation

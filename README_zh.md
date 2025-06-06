@@ -1,4 +1,3 @@
-```markdown
 # CastX - 安卓投屏控制工具
 
 [英文文档](README.md) | [View in English](README.md)

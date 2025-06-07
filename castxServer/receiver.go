@@ -14,7 +14,7 @@ import (
 
 type Receiver struct {
 	listener           net.Listener
-	counter            int
+	Counter            int
 	run                bool
 	audioSampleRate    int
 	audioLastPts       int64
@@ -167,7 +167,7 @@ func (castx *Castx) startReceiver(port int) {
 		panic(fmt.Sprintf("监听失败: %v", err))
 	}
 	fmt.Println("Scrcpy 接收服务已启动，监听端口:%d...", port)
-	castx.Receiver.counter = 0
+	castx.Receiver.Counter = 0
 	castx.Receiver.run = true
 	// 主接收循环
 	go func() {
@@ -179,13 +179,13 @@ func (castx *Castx) startReceiver(port int) {
 			}
 			fmt.Printf("接收到连接: %s\n", conn.RemoteAddr()) // 打印连接信息
 			//adb使用scrcpy才有第一个连接发送设备名字
-			if castx.Config.UseAdb && castx.Receiver.counter == 0 {
+			if castx.Config.UseAdb && castx.Receiver.Counter == 0 {
 				deviceName := make([]byte, 64)
 				io.ReadFull(conn, deviceName)
-				//fmt.Printf("设备名称:%s\r\n", castx.deviceName)
+				fmt.Printf("设备名称:%s\r\n", deviceName)
 			}
 			go castx.handleConnection(conn) // 为每个连接启动goroutine
-			castx.Receiver.counter++
+			castx.Receiver.Counter++
 		}
 	}()
 }

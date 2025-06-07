@@ -1,4 +1,4 @@
-package scrcpy
+package comm
 
 import (
 	"bytes"

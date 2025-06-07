@@ -16,10 +16,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func (scrcpyClient *ScrcpyClient) InitAdb(peerName string, savPath string) int {
+func (scrcpyClient *ScrcpyClient) InitAdb(peerName string, savPath string, reversePort int) {
 	//init
 	var adbClient = libadb.AdbClient{CertFile: fmt.Sprintf("%sadbkey.pub", savPath), KeyFile: fmt.Sprintf("%sadbkey.key", savPath), PeerName: peerName}
-	var reversePort = 6000
+
 	scrcpyClient.castx.WsServer.SetAdbConnect(func(data string) {
 		var dataInfo map[string]interface{}
 		err := json.Unmarshal([]byte(data), &dataInfo)
@@ -73,7 +73,6 @@ func (scrcpyClient *ScrcpyClient) InitAdb(peerName string, savPath string) int {
 		}
 
 	})
-	return reversePort
 }
 
 func (scrcpyClient *ScrcpyClient) adbConnectOk(adbClient *libadb.AdbClient, savPath string, reversePort int) {
@@ -85,7 +84,6 @@ func (scrcpyClient *ScrcpyClient) adbConnectOk(adbClient *libadb.AdbClient, savP
 		defer func() {
 			scrcpyClient.castx.Config.AdbConnect = false
 			scrcpyClient.castx.WsServer.BroadcastInfo()
-			scrcpyClient.counter = 0 //计数器重置位为0
 		}()
 		localFile := fmt.Sprintf("%sscrcpy-server-v3.1", savPath)
 		writeIfMD5Mismatch(localFile)
@@ -95,8 +93,7 @@ func (scrcpyClient *ScrcpyClient) adbConnectOk(adbClient *libadb.AdbClient, savP
 		scid := GenerateSCID()
 		reverseErr := adbClient.Reverse(fmt.Sprintf("localabstract:scrcpy_%s", scid), fmt.Sprintf("tcp:%d", reversePort))
 		fmt.Printf("ReverseErr:%+v\r\n", reverseErr)
-		//	cmd1 := exec.Command("adb", "reverse", fmt.Sprintf("localabstract:scrcpy_%s", scid), fmt.Sprintf("tcp:%d", reversePort))
-		//cmd1.Start()
+
 		//repeat-previous-frame-after=0
 		// audio-output-buffer=100 --audio-buffer=100
 		//'profile=4200,b-frames=0,preset=ultrafast'

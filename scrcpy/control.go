@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math/rand"
 	"net"
 	"time"
 
@@ -13,6 +14,10 @@ import (
 var KEYCODE_BACK = 4
 var KEYCODE_HOME = 3
 var KEYCODE_MENU = 82
+
+func mtRand(min int, max int) int {
+	return rand.Intn(max-min+1) + min
+}
 
 func SendKeyCode(controlConn net.Conn, action byte, keycode uint32, repeat uint32, metaState uint32) {
 	if controlConn != nil {

@@ -6,15 +6,12 @@ require (
 	github.com/dosgo/libadb v1.2.6
 	github.com/go-vgo/robotgo v0.110.7
 	github.com/gorilla/websocket v1.5.3
-	github.com/grandcat/zeroconf v1.0.0
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
-	github.com/pion/mdns v0.0.12
 	github.com/pion/rtp v1.8.7
 	github.com/pion/webrtc/v3 v3.3.5
 	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/wlynxg/anet v0.0.3
 	golang.org/x/mobile v0.0.0-20250408133729-978277e7eaf7
-	golang.org/x/net v0.39.0
 )
 
 require (
@@ -28,6 +25,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.3.1 // indirect
+	github.com/grandcat/zeroconf v1.0.0 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20240909124753-873cd0166683 // indirect
@@ -40,6 +38,7 @@ require (
 	github.com/pion/ice/v2 v2.3.36 // indirect
 	github.com/pion/interceptor v0.1.29 // indirect
 	github.com/pion/logging v0.2.2 // indirect
+	github.com/pion/mdns v0.0.12 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.14 // indirect
 	github.com/pion/sctp v1.8.19 // indirect
@@ -67,6 +66,7 @@ require (
 	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f // indirect
 	golang.org/x/image v0.26.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
+	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect

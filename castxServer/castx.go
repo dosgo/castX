@@ -14,9 +14,10 @@ type Castx struct {
 	WsServer     *comm.WsServer
 	HttpServer   *comm.HttpServer
 	Config       *comm.Config
+	Receiver     *Receiver
 }
 
-func Start(webPort int, width int, height int, _mimeType string, useAdb bool, password string) (*Castx, error) {
+func Start(webPort int, width int, height int, _mimeType string, useAdb bool, password string, receiverPort int) (*Castx, error) {
 	var castx = &Castx{}
 	var err error
 	castx.Config = &comm.Config{MimeType: webrtc.MimeTypeH264}
@@ -34,6 +35,10 @@ func Start(webPort int, width int, height int, _mimeType string, useAdb bool, pa
 	}
 	castx.WsServer = comm.NewWs(castx.Config, castx.WebrtcServer)
 	castx.HttpServer, err = comm.StartWeb(webPort, castx.WsServer)
+	if receiverPort > 0 {
+		castx.Receiver = &Receiver{}
+		go castx.startReceiver(receiverPort)
+	}
 	return castx, nil
 }
 func (castx *Castx) UpdateConfig(width int, height int, _videoWidth int, _videoHeight int, _orientation int) {

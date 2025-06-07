@@ -15,8 +15,8 @@ var castx *castxServer.Castx
 var webrtcReceive *comm.WebrtcReceive
 var scrcpyClient *scrcpy.ScrcpyClient
 
-func Start(webPort int, width int, height int, mimeType string, password string) {
-	castx, _ = castxServer.Start(webPort, width, height, mimeType, false, password)
+func Start(webPort int, width int, height int, mimeType string, password string, receiverPort int) {
+	castx, _ = castxServer.Start(webPort, width, height, mimeType, false, password, receiverPort)
 }
 
 func SendVideo(nal []byte, timestamp int64) {
@@ -37,6 +37,9 @@ func Shutdown() {
 		}
 		if castx.WsServer != nil {
 			castx.WsServer.Shutdown()
+		}
+		if castx.Receiver != nil {
+			castx.CloseReceiver()
 		}
 	}
 }

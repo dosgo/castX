@@ -16,7 +16,7 @@ var framerate = 30
 func main() {
 
 	bounds := screenshot.GetDisplayBounds(0)
-	castx, _ := castxServer.Start(8081, bounds.Dx(), bounds.Dy(), "", false, "123456")
+	castx, _ := castxServer.Start(8081, bounds.Dx(), bounds.Dy(), "", false, "123456", 0)
 	castx.WsServer.SetControlFun(func(controlData map[string]interface{}) {
 		if controlData["type"] == "left" {
 			if f, ok := controlData["x"].(float64); ok {

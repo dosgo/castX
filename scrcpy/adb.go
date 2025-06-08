@@ -80,7 +80,7 @@ func (scrcpyClient *ScrcpyClient) adbConnectOk(adbClient *libadb.AdbClient, savP
 	if scrcpyClient.castx.Config.MaxSize > 0 {
 		maxSize = fmt.Sprintf("max_size=%d", int(scrcpyClient.castx.Config.MaxSize))
 	}
-	scrcpyClient.castx.Receiver.Counter = 0 //重置接收计数器很重要
+	scrcpyClient.castx.ScrcpyReceiver.Counter = 0 //重置接收计数器很重要
 	go func() {
 		defer func() {
 			scrcpyClient.castx.Config.AdbConnect = false

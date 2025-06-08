@@ -10,11 +10,11 @@ import (
 
 type Castx struct {
 	//	framerate    int
-	WebrtcServer *comm.WebrtcServer
-	WsServer     *comm.WsServer
-	HttpServer   *comm.HttpServer
-	Config       *comm.Config
-	Receiver     *Receiver
+	WebrtcServer   *comm.WebrtcServer
+	WsServer       *comm.WsServer
+	HttpServer     *comm.HttpServer
+	Config         *comm.Config
+	ScrcpyReceiver *ScrcpyReceiver
 }
 
 func Start(webPort int, width int, height int, _mimeType string, useAdb bool, password string, receiverPort int) (*Castx, error) {
@@ -36,7 +36,7 @@ func Start(webPort int, width int, height int, _mimeType string, useAdb bool, pa
 	castx.WsServer = comm.NewWs(castx.Config, castx.WebrtcServer)
 	castx.HttpServer, err = comm.StartWeb(webPort, castx.WsServer)
 	if receiverPort > 0 {
-		castx.Receiver = &Receiver{}
+		castx.ScrcpyReceiver = &ScrcpyReceiver{}
 		go castx.startReceiver(receiverPort)
 	}
 	return castx, nil

@@ -12,7 +12,7 @@ import (
 	"github.com/dosgo/castX/comm"
 )
 
-type Receiver struct {
+type ScrcpyReceiver struct {
 	listener           net.Listener
 	Counter            int
 	run                bool
@@ -63,7 +63,7 @@ func (castx *Castx) handleAudio(conn net.Conn) error {
 	data := make([]byte, 65535)
 	var pts int64 = 0
 
-	for castx.Receiver.run {
+	for castx.ScrcpyReceiver.run {
 		h, err := readFrameHeader(conn)
 		if err != nil {
 			return err
@@ -80,7 +80,7 @@ func (castx *Castx) handleAudio(conn net.Conn) error {
 			binary.Write(buf, binary.LittleEndian, uint64(n)) // Length
 			buf.Write(data[:n])
 			opusHead := comm.ParseOpusHead(data[:n])
-			castx.Receiver.audioSampleRate = int(opusHead.SampleRate)
+			castx.ScrcpyReceiver.audioSampleRate = int(opusHead.SampleRate)
 			castx.WebrtcServer.SendAudio(buf.Bytes(), int64(h.PTS))
 		} else {
 			pts = int64(h.PTS)
@@ -112,11 +112,14 @@ func (castx *Castx) handleVideo(conn net.Conn) error {
 			spsPpsInfo := bytes.Split(data[:h.DataLength], startCode)
 			sps = append([]byte{}, spsPpsInfo[1]...)
 			pps = append([]byte{}, spsPpsInfo[2]...)
+
+			fmt.Printf("sps:%+v\r\n", sps)
+			fmt.Printf("pps:%+v\r\n", pps)
 			castx.WebrtcServer.SendVideo(append(startCode, sps...), int64(h.PTS))
 			castx.WebrtcServer.SendVideo(append(startCode, pps...), int64(h.PTS))
 			pspInfo, _ := comm.ParseSPS(sps)
 
-			if pspInfo.Width != castx.Config.ScreenWidth {
+			if pspInfo.Width != castx.Config.ScreenWidth && castx.Config.UseAdb {
 				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, pspInfo.Width, pspInfo.Height, 0)
 			}
 			continue
@@ -150,8 +153,8 @@ func (castx *Castx) handleConnection(conn net.Conn) {
 	case 2:
 		castx.handleAudio(conn)
 	case 3:
-		if castx.Receiver.controlConnectCall != nil {
-			castx.Receiver.controlConnectCall(conn)
+		if castx.ScrcpyReceiver.controlConnectCall != nil {
+			castx.ScrcpyReceiver.controlConnectCall(conn)
 		}
 	default:
 		fmt.Printf("未知数据类型: 0x%x\n", socketType)
@@ -162,54 +165,54 @@ func (castx *Castx) handleConnection(conn net.Conn) {
 func (castx *Castx) startReceiver(port int) {
 	// 启动 TCP 服务器
 	var err error
-	castx.Receiver.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", port))
+	castx.ScrcpyReceiver.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		panic(fmt.Sprintf("监听失败: %v", err))
 	}
 	fmt.Println("Scrcpy 接收服务已启动，监听端口:%d...", port)
-	castx.Receiver.Counter = 0
-	castx.Receiver.run = true
+	castx.ScrcpyReceiver.Counter = 0
+	castx.ScrcpyReceiver.run = true
 	// 主接收循环
 	go func() {
-		for castx.Receiver.run {
-			conn, err := castx.Receiver.listener.Accept()
+		for castx.ScrcpyReceiver.run {
+			conn, err := castx.ScrcpyReceiver.listener.Accept()
 			if err != nil {
 				fmt.Printf("接受连接失败: %v\n", err)
-				continue
+				break
 			}
 			fmt.Printf("接收到连接: %s\n", conn.RemoteAddr()) // 打印连接信息
 			//adb使用scrcpy才有第一个连接发送设备名字
-			if castx.Config.UseAdb && castx.Receiver.Counter == 0 {
+			if castx.Config.UseAdb && castx.ScrcpyReceiver.Counter == 0 {
 				deviceName := make([]byte, 64)
 				io.ReadFull(conn, deviceName)
 				fmt.Printf("设备名称:%s\r\n", deviceName)
 			}
 			go castx.handleConnection(conn) // 为每个连接启动goroutine
-			castx.Receiver.Counter++
+			castx.ScrcpyReceiver.Counter++
 		}
 	}()
 }
 
-func (castx *Castx) CloseReceiver() {
-	if castx.Receiver != nil && castx.Receiver.listener != nil {
-		castx.Receiver.listener.Close()
+func (castx *Castx) CloseScrcpyReceiver() {
+	if castx.ScrcpyReceiver != nil && castx.ScrcpyReceiver.listener != nil {
+		castx.ScrcpyReceiver.listener.Close()
 	}
-	if castx.Receiver != nil {
-		castx.Receiver.run = false
+	if castx.ScrcpyReceiver != nil {
+		castx.ScrcpyReceiver.run = false
 	}
 }
 
 func (castx *Castx) fixAudioPts(_pts int64) int64 {
-	if castx.Receiver.audioLastPts == 0 {
-		castx.Receiver.audioLastPts = _pts
+	if castx.ScrcpyReceiver.audioLastPts == 0 {
+		castx.ScrcpyReceiver.audioLastPts = _pts
 	} else {
-		castx.Receiver.audioLastPts = castx.Receiver.audioLastPts + (1000000 / int64(castx.Receiver.audioSampleRate))
+		castx.ScrcpyReceiver.audioLastPts = castx.ScrcpyReceiver.audioLastPts + (1000000 / int64(castx.ScrcpyReceiver.audioSampleRate))
 	}
-	return castx.Receiver.audioLastPts
+	return castx.ScrcpyReceiver.audioLastPts
 }
 
 func (castx *Castx) SetControlConnectCall(_controlConnectCall func(net.Conn)) {
-	castx.Receiver.controlConnectCall = _controlConnectCall
+	castx.ScrcpyReceiver.controlConnectCall = _controlConnectCall
 }
 
 // 读取协议头
@@ -225,7 +228,9 @@ func (castx *Castx) readHeader(conn net.Conn) (int, error) {
 		videoHeight := int(binary.BigEndian.Uint32(paramData[4:8]))
 		fmt.Printf("视频width:%d\n", binary.BigEndian.Uint32(paramData[0:4]))
 		fmt.Printf("视频Height:%d\n", binary.BigEndian.Uint32(paramData[4:8])) // 打印视频参数，实际使用时需要解析并处理这些参数，这里仅打印示例
-		castx.UpdateConfig(videoWidth, videoHeight, videoWidth, videoHeight, 0)
+		if castx.Config.UseAdb {
+			castx.UpdateConfig(videoWidth, videoHeight, videoWidth, videoHeight, 0)
+		}
 		return 1, nil
 	} else if string(buf) == "opus" || string(buf) == "aac" || string(buf) == "raw" {
 		return 2, nil

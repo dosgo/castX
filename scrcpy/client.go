@@ -47,7 +47,7 @@ func (scrcpyClient *ScrcpyClient) Shutdown() {
 	if scrcpyClient.castx.WsServer != nil {
 		scrcpyClient.castx.WsServer.Shutdown()
 	}
-	scrcpyClient.castx.CloseReceiver()
+	scrcpyClient.castx.CloseScrcpyReceiver()
 }
 
 // 处理控制数据（示例解析基本控制指令）

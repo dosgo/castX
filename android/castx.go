@@ -38,8 +38,8 @@ func Shutdown() {
 		if castx.WsServer != nil {
 			castx.WsServer.Shutdown()
 		}
-		if castx.Receiver != nil {
-			castx.CloseReceiver()
+		if castx.ScrcpyReceiver != nil {
+			castx.CloseScrcpyReceiver()
 		}
 	}
 }

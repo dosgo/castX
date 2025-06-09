@@ -110,14 +110,12 @@ func (castx *Castx) handleVideo(conn net.Conn) error {
 		nalType := data[4] & 0x1F // 取低5位
 		if nalType == 7 {
 			spsPpsInfo := bytes.Split(data[:h.DataLength], startCode)
-			sps = append([]byte{}, spsPpsInfo[1]...)
-			pps = append([]byte{}, spsPpsInfo[2]...)
+			sps = append(startCode, spsPpsInfo[1]...)
+			pps = append(startCode, spsPpsInfo[2]...)
 
-			fmt.Printf("sps:%+v\r\n", sps)
-			fmt.Printf("pps:%+v\r\n", pps)
-			castx.WebrtcServer.SendVideo(append(startCode, sps...), int64(h.PTS))
-			castx.WebrtcServer.SendVideo(append(startCode, pps...), int64(h.PTS))
-			pspInfo, _ := comm.ParseSPS(sps)
+			castx.WebrtcServer.SendVideo(sps, int64(h.PTS))
+			castx.WebrtcServer.SendVideo(pps, int64(h.PTS))
+			pspInfo, _ := comm.ParseSPS(sps[4:])
 
 			if pspInfo.Width != castx.Config.ScreenWidth && castx.Config.UseAdb {
 				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, pspInfo.Width, pspInfo.Height, 0)
@@ -125,8 +123,8 @@ func (castx *Castx) handleVideo(conn net.Conn) error {
 			continue
 		}
 		if h.IsKeyFrame {
-			castx.WebrtcServer.SendVideo(append(startCode, sps...), int64(h.PTS))
-			castx.WebrtcServer.SendVideo(append(startCode, pps...), int64(h.PTS))
+			castx.WebrtcServer.SendVideo(sps, int64(h.PTS))
+			castx.WebrtcServer.SendVideo(pps, int64(h.PTS))
 			// 打印关键帧信息，实际使用时可以根据需要进行处理，这里仅打印示例
 		}
 		castx.WebrtcServer.SendVideo(data[:h.DataLength], int64(h.PTS))

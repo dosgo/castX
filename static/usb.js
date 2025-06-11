@@ -93,6 +93,7 @@ async  function startUsbReadingLoop() {
             }
         }
     } catch (error) {
+        wsUsb.close();
         log(`USB 读取错误: ${error}`);
     }
 }

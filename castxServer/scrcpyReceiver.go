@@ -35,14 +35,12 @@ type FrameHeader struct {
 	DataLength uint32 // 数据长度
 }
 
-func readFrameHeader(conn net.Conn) (*FrameHeader, error) {
-	buf := make([]byte, FRAME_HEADER_SIZE)
-	if _, err := io.ReadFull(conn, buf); err != nil {
-		return nil, err
+func readFrameHeader(conn net.Conn, headBuf []byte, header *FrameHeader) error {
+	if _, err := io.ReadFull(conn, headBuf); err != nil {
+		return err
 	}
-
 	// 1. 解析前8字节为BigEndian的uint64
-	headerU64 := binary.BigEndian.Uint64(buf[0:8])
+	headerU64 := binary.BigEndian.Uint64(headBuf[0:8])
 
 	// 2. 提取标志位
 	isConfig := (headerU64 >> 63) & 0x01   // 最高位(第63位)
@@ -50,29 +48,29 @@ func readFrameHeader(conn net.Conn) (*FrameHeader, error) {
 
 	// 3. 提取PTS (低62位)
 	pts := headerU64 & 0x3FFFFFFFFFFFFFFF
-	return &FrameHeader{
-		IsConfig:   isConfig == 1,
-		IsKeyFrame: isKeyFrame == 1,
-		PTS:        pts,
-		DataLength: binary.BigEndian.Uint32(buf[8:12]),
-	}, nil
+	header.IsConfig = isConfig == 1
+	header.IsKeyFrame = isKeyFrame == 1
+	header.PTS = pts
+	header.DataLength = binary.BigEndian.Uint32(headBuf[8:12])
+	return nil
 }
 
 // 处理音频数据（示例仅打印信息）
 func (castx *Castx) handleAudio(conn net.Conn) error {
 	data := make([]byte, 65535)
 	var pts int64 = 0
-
+	frameHeader := &FrameHeader{}
+	headerBuf := make([]byte, FRAME_HEADER_SIZE)
 	for castx.ScrcpyReceiver.run {
-		h, err := readFrameHeader(conn)
+		err := readFrameHeader(conn, headerBuf, frameHeader)
 		if err != nil {
 			return err
 		}
-		n, err := io.ReadFull(conn, data[:h.DataLength])
+		n, err := io.ReadFull(conn, data[:frameHeader.DataLength])
 		if err != nil {
 			return err
 		}
-		if h.IsConfig {
+		if frameHeader.IsConfig {
 			//add AOPUSHD header
 			buf := new(bytes.Buffer)
 			// 1. AOPUSHD 块
@@ -81,9 +79,9 @@ func (castx *Castx) handleAudio(conn net.Conn) error {
 			buf.Write(data[:n])
 			opusHead := comm.ParseOpusHead(data[:n])
 			castx.ScrcpyReceiver.audioSampleRate = int(opusHead.SampleRate)
-			castx.WebrtcServer.SendAudio(buf.Bytes(), int64(h.PTS))
+			castx.WebrtcServer.SendAudio(buf.Bytes(), int64(frameHeader.PTS))
 		} else {
-			pts = int64(h.PTS)
+			pts = int64(frameHeader.PTS)
 			//pts = scrcpyClient.fixAudioPts(int64(h.PTS))
 			castx.WebrtcServer.SendAudio(data[:n], pts)
 		}
@@ -97,24 +95,28 @@ func (castx *Castx) handleVideo(conn net.Conn) error {
 	sps := make([]byte, 0)
 	pps := make([]byte, 0)
 	startCode := []byte{0x00, 0x00, 0x00, 0x01}
+
+	frameHeader := &FrameHeader{}
+	headerBuf := make([]byte, FRAME_HEADER_SIZE)
+
 	for {
-		h, err := readFrameHeader(conn)
+		err := readFrameHeader(conn, headerBuf, frameHeader)
 		if err != nil {
 			return err
 		}
 
-		if _, err := io.ReadFull(conn, data[:h.DataLength]); err != nil {
+		if _, err := io.ReadFull(conn, data[:frameHeader.DataLength]); err != nil {
 			return err
 		}
 
 		nalType := data[4] & 0x1F // 取低5位
 		if nalType == 7 {
-			spsPpsInfo := bytes.Split(data[:h.DataLength], startCode)
+			spsPpsInfo := bytes.Split(data[:frameHeader.DataLength], startCode)
 			sps = append(startCode, spsPpsInfo[1]...)
 			pps = append(startCode, spsPpsInfo[2]...)
 
-			castx.WebrtcServer.SendVideo(sps, int64(h.PTS))
-			castx.WebrtcServer.SendVideo(pps, int64(h.PTS))
+			castx.WebrtcServer.SendVideo(sps, int64(frameHeader.PTS))
+			castx.WebrtcServer.SendVideo(pps, int64(frameHeader.PTS))
 			pspInfo, _ := comm.ParseSPS(sps[4:])
 
 			if pspInfo.Width != castx.Config.ScreenWidth && castx.Config.UseAdb {
@@ -122,12 +124,12 @@ func (castx *Castx) handleVideo(conn net.Conn) error {
 			}
 			continue
 		}
-		if h.IsKeyFrame {
-			castx.WebrtcServer.SendVideo(sps, int64(h.PTS))
-			castx.WebrtcServer.SendVideo(pps, int64(h.PTS))
+		if frameHeader.IsKeyFrame {
+			castx.WebrtcServer.SendVideo(sps, int64(frameHeader.PTS))
+			castx.WebrtcServer.SendVideo(pps, int64(frameHeader.PTS))
 			// 打印关键帧信息，实际使用时可以根据需要进行处理，这里仅打印示例
 		}
-		castx.WebrtcServer.SendVideo(data[:h.DataLength], int64(h.PTS))
+		castx.WebrtcServer.SendVideo(data[:frameHeader.DataLength], int64(frameHeader.PTS))
 	}
 }
 
@@ -167,7 +169,7 @@ func (castx *Castx) startReceiver(port int) {
 	if err != nil {
 		panic(fmt.Sprintf("监听失败: %v", err))
 	}
-	fmt.Println("Scrcpy 接收服务已启动，监听端口:%d...", port)
+	fmt.Printf("Scrcpy 接收服务已启动，监听端口:%d...\r\n", port)
 	castx.ScrcpyReceiver.Counter = 0
 	castx.ScrcpyReceiver.run = true
 	// 主接收循环

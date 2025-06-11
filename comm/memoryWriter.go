@@ -24,6 +24,8 @@ type MemoryWriter struct {
 	webrtcServer *WebrtcServer
 }
 
+var startCode = []byte{0x00, 0x00, 0x00, 0x01}
+
 func (m *MemoryWriter) Write(p []byte) (n int, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -76,7 +78,6 @@ func (m *MemoryWriter) toWebrtc() {
 func findStartCode(iow *MemoryWriter) int {
 	iow.mu.Lock()
 	defer iow.mu.Unlock()
-	startCode := []byte{0x00, 0x00, 0x00, 0x01}
 	idx := bytes.Index(iow.buffer, startCode)
 	return idx
 }

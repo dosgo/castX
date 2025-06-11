@@ -1,6 +1,6 @@
 package castX
 
-// android build   gomobile bind -androidapi 21 -target=android -ldflags "-checklinkname=0"
+// android build   gomobile bind -androidapi 21 -target=android -ldflags "-checklinkname=0 -s -w"
 
 import (
 	"encoding/json"

@@ -3,7 +3,7 @@ module github.com/dosgo/castX
 go 1.24.0
 
 require (
-	github.com/dosgo/libadb v1.2.7
+	github.com/dosgo/libadb v1.2.8
 	github.com/go-vgo/robotgo v0.110.7
 	github.com/gorilla/websocket v1.5.3
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c

@@ -95,8 +95,8 @@ func StartWebRtcReceive(url string) {
 	webrtcReceive.StartWebRtcReceive(url, false)
 }
 
-func SetSize(width int, height int, videoWidth int, videoHeight int, orientation int) {
-	castx.UpdateConfig(width, height, videoWidth, videoHeight, orientation)
+func SetSize(videoWidth int, videoHeight int, orientation int) {
+	castx.UpdateConfig(videoWidth, videoHeight, orientation)
 }
 
 func StartScrcpyClient(webPort int, peerName string, savaPath string, password string) {

@@ -1,8 +1,7 @@
 let pc = null;
 let remoteVideo = document.getElementById('remoteVideo');
 let GOOS='';
-let nativeWidth = 0; // 手机原始宽度
-let nativeHeight = 0; // 手机原始高度
+
 let videoHeight=0;//视频原始高度
 let videoWidth=0;//视频原始宽度
 let targetWidth=0;
@@ -26,8 +25,6 @@ ws.onmessage = (event) => {
     }
     if (msg.type === 'infoNotify') {
         orientation = msg.data.orientation;
-        nativeWidth  = msg.data.width;
-        nativeHeight  = msg.data.height;
         videoHeight = msg.data.videoHeight;
         videoWidth  = msg.data.videoWidth;
         
@@ -115,7 +112,7 @@ async function sendOffer(iceRestart) {
     }));
 }
 function keyboardClick(code) {
-    var args= JSON.stringify({"type":'keyboard',"code":code,"videoWidth":remoteVideo.videoWidth,"videoHeight":remoteVideo.videoHeight})
+    var args= JSON.stringify({"type":'keyboard',"code":code,"videoWidth":videoWidth,"videoHeight":videoHeight})
     ws.send(JSON.stringify({
         type: 'control',
         data: args
@@ -124,7 +121,7 @@ function keyboardClick(code) {
 
 
 function swipe(code) {
-    var args=  JSON.stringify({"type":'swipe',"code":code,"videoWidth":remoteVideo.videoWidth,"videoHeight":remoteVideo.videoHeight})
+    var args=  JSON.stringify({"type":'swipe',"code":code,"videoWidth":videoWidth,"videoHeight":videoHeight})
     ws.send(JSON.stringify({
         type: 'control',
         data: args
@@ -133,7 +130,7 @@ function swipe(code) {
 
 
 function mouseClick(type,x,y,touch) {
-    var args=  JSON.stringify({"type":type,"x":x,"y":y,"offsetWidth":remoteVideo.offsetWidth,"offsetHeight":remoteVideo.offsetHeight,'touch':touch})   
+    var args=  JSON.stringify({"type":type,"x":x,"y":y,"videoWidth":videoWidth,"videoHeight":videoHeight,'touch':touch})   
     ws.send(JSON.stringify({
         type: 'control',
         data: args

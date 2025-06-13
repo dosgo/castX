@@ -148,12 +148,10 @@ function fixXy( relativeX, relativeY){
 
   console.log("displayWidth"+ displayWidth );
   console.log("displayHeight"+ displayHeight);
-  console.log("nativeWidth"+ nativeWidth);
-  console.log("nativeHeight"+ nativeHeight);
-  // 6. 映射到远程屏幕坐标
-   remoteX = Math.round((relativeX) * (nativeWidth /displayWidth));
-   remoteY = Math.round((relativeY)* (nativeHeight / displayHeight));
 
+ 
+  remoteX = Math.round((relativeX) * (videoWidth /displayWidth));
+   remoteY = Math.round((relativeY)* (videoHeight / displayHeight));
   return {remoteX, remoteY};
 }
 

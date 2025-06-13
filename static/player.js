@@ -7,7 +7,7 @@
         let _targetWidth=0;
         let _targetHeight=0;
 
-        const videoAspect = nativeWidth / nativeHeight;
+        const videoAspect = videoWidth / videoHeight;
         const containerAspect = containerWidth / containerHeight;
 
         if (containerAspect > videoAspect) {

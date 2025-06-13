@@ -349,28 +349,3 @@ func (info *SPSInfo) estimateFrameRate() {
 		info.FrameRate = 24.0
 	}
 }
-
-// 实用函数：从H.264流中提取SPS
-func ExtractSPS(data []byte) []byte {
-	start := bytes.Index(data, []byte{0x00, 0x00, 0x00, 0x01, 0x67})
-	if start == -1 {
-		// 尝试短格式起始码
-		start = bytes.Index(data, []byte{0x00, 0x00, 0x01, 0x67})
-		if start == -1 {
-			return nil
-		}
-		start++ // 调整到0x67位置
-	} else {
-		start += 4 // 跳过起始码
-	}
-
-	end := bytes.Index(data[start:], []byte{0x00, 0x00, 0x00, 0x01})
-	if end == -1 {
-		end = bytes.Index(data[start:], []byte{0x00, 0x00, 0x01})
-	}
-
-	if end == -1 {
-		return data[start:]
-	}
-	return data[start : start+end]
-}

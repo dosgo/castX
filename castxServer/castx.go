@@ -21,8 +21,8 @@ func Start(webPort int, width int, height int, _mimeType string, useAdb bool, pa
 	var castx = &Castx{}
 	var err error
 	castx.Config = &comm.Config{MimeType: webrtc.MimeTypeH264}
-	castx.Config.ScreenWidth = width
-	castx.Config.ScreenHeight = height
+	castx.Config.VideoWidth = width
+	castx.Config.VideoHeight = height
 	castx.Config.UseAdb = useAdb
 	castx.Config.SecurityKey = randStr(12)
 	castx.Config.Password = password
@@ -41,9 +41,7 @@ func Start(webPort int, width int, height int, _mimeType string, useAdb bool, pa
 	}
 	return castx, nil
 }
-func (castx *Castx) UpdateConfig(width int, height int, _videoWidth int, _videoHeight int, _orientation int) {
-	castx.Config.ScreenWidth = width
-	castx.Config.ScreenHeight = height
+func (castx *Castx) UpdateConfig(_videoWidth int, _videoHeight int, _orientation int) {
 	castx.Config.VideoWidth = _videoWidth
 	castx.Config.VideoHeight = _videoHeight
 	castx.Config.Orientation = _orientation

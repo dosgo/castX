@@ -80,8 +80,6 @@ func (wsServer *WsServer) BroadcastInfo() {
 		Type: MsgTypeInfoNotify,
 		Data: map[string]interface{}{
 			"orientation": wsServer.config.Orientation,
-			"width":       wsServer.config.ScreenWidth,
-			"height":      wsServer.config.ScreenHeight,
 			"videoHeight": wsServer.config.VideoHeight,
 			"videoWidth":  wsServer.config.VideoWidth,
 			"useAdb":      wsServer.config.UseAdb,

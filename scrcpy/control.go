@@ -93,9 +93,9 @@ func controlCall(controlConn net.Conn, config *comm.Config, controlData map[stri
 			x := uint32(f)
 			y := uint32(controlData["y"].(float64))
 			var pointerId uint64 = 0
-			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, x, y, uint16(config.ScreenWidth), uint16(config.ScreenHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
 			time.Sleep(time.Millisecond * time.Duration(mtRand(50, 90))) // 等待100毫秒
-			SendKTouchEvent(controlConn, ACTION_UP, pointerId, x, y, uint16(config.ScreenWidth), uint16(config.ScreenHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_UP, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
 		}
 	}
 	if controlData["type"] == "swipe" {
@@ -109,7 +109,7 @@ func controlCall(controlConn net.Conn, config *comm.Config, controlData map[stri
 			x := uint32(f)
 			y := uint32(controlData["y"].(float64))
 			var pointerId uint64 = 0
-			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, x, y, uint16(config.ScreenWidth), uint16(config.ScreenHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
 			fmt.Printf("panstart:%d,%d\r\n", x, y) // 打印 x 和 y 的值，用于调试，你可以根据需要修改打印 forma
 		}
 	}
@@ -118,7 +118,7 @@ func controlCall(controlConn net.Conn, config *comm.Config, controlData map[stri
 			x := uint32(f)
 			y := uint32(controlData["y"].(float64))
 			var pointerId uint64 = 0
-			SendKTouchEvent(controlConn, ACTION_MOVE, pointerId, x, y, uint16(config.ScreenWidth), uint16(config.ScreenHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_MOVE, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
 			fmt.Printf("pan:%d,%d\r\n", x, y)
 		}
 	}
@@ -127,7 +127,7 @@ func controlCall(controlConn net.Conn, config *comm.Config, controlData map[stri
 			x := uint32(f)
 			y := uint32(controlData["y"].(float64))
 			var pointerId uint64 = 0
-			SendKTouchEvent(controlConn, ACTION_UP, pointerId, x, y, uint16(config.ScreenWidth), uint16(config.ScreenHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_UP, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
 			fmt.Printf("panend:%d,%d\r\n", x, y)
 		}
 	}

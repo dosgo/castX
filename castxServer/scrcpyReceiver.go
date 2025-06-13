@@ -119,8 +119,8 @@ func (castx *Castx) handleVideo(conn net.Conn) error {
 			castx.WebrtcServer.SendVideo(pps, int64(frameHeader.PTS))
 			pspInfo, _ := comm.ParseSPS(sps[4:])
 
-			if pspInfo.Width != castx.Config.ScreenWidth && castx.Config.UseAdb {
-				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, pspInfo.Width, pspInfo.Height, 0)
+			if pspInfo.Width != castx.Config.VideoWidth {
+				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, 0)
 			}
 			continue
 		}
@@ -228,9 +228,7 @@ func (castx *Castx) readHeader(conn net.Conn) (int, error) {
 		videoHeight := int(binary.BigEndian.Uint32(paramData[4:8]))
 		fmt.Printf("视频width:%d\n", binary.BigEndian.Uint32(paramData[0:4]))
 		fmt.Printf("视频Height:%d\n", binary.BigEndian.Uint32(paramData[4:8])) // 打印视频参数，实际使用时需要解析并处理这些参数，这里仅打印示例
-		if castx.Config.UseAdb {
-			castx.UpdateConfig(videoWidth, videoHeight, videoWidth, videoHeight, 0)
-		}
+		castx.UpdateConfig(videoWidth, videoHeight, 0)
 		return 1, nil
 	} else if string(buf) == "opus" || string(buf) == "aac" || string(buf) == "raw" {
 		return 2, nil

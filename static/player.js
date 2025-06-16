@@ -63,24 +63,9 @@ var videoVm = Vue.createApp({
                     });
             } else {
                this.remoteVideo.pause();
-              
             }
     },
-    togglePlayCanvas() {
-        if (this.remoteVideo.paused) {
-            this.remoteVideo.play()
-                .then(() => {
-                    initWebGL(this.remoteVideo);
-                    canvasSizev1();
-                })
-                .catch(error => {
-                    console.log('播放被阻止:', error);
-                });
-        } else {
-            stopRender();
-            this.remoteVideo.pause();
-        }
-    },
+
      toggleMute() {
         this.isMuted = !this.isMuted;
         remoteVideo.muted = this.isMuted;

@@ -54,7 +54,7 @@
     <video id="remoteVideo"   autoplay style="display: none;" ></video>
     <canvas id="webglCanvas"   style="margin: auto auto;" ></canvas>
     <div id="menuView">
-        <svg class="control-btn play-btn" viewBox="0 0 24 24"  @click="togglePlay()">
+        <svg class="control-btn play-btn" viewBox="0 0 24 24"  @click="togglePlayCanvas()">
          <path id="play-icon" d="M8 5v14l11-7z" v-show="!isPlaying"/>
          <path id="pause-icon" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"  v-show="isPlaying"/>
        </svg>
@@ -99,6 +99,7 @@
        <svg class="control-btn" viewBox="0 0 24 24"  onclick="sendOffer(true)">
          <path d="M12 5V3L8 7l4 4V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
        </svg>
+       <span id="posx"></span>
    
     </div>
 </div>
@@ -113,37 +114,108 @@
 <script src="comm.js"></script>
 <script>
   
-    const canvas = document.getElementById('webglCanvas');
-    const ctx = canvas.getContext('2d');
-    const video = document.getElementById('remoteVideo');
-    let videoCallbackId=null;
-
-    video.addEventListener('play', () => {
-        initWebGL();
-        canvasSizev1();
-    });
-
-    video.addEventListener('pause', () => {
-        stopRender();
-    });
+  const video = document.getElementById('remoteVideo');
+    var isRendering=false;
     // 2. 初始化 WebGL 处理
     function initWebGL() {
-        // 绘制当前视频帧到canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        videoCallbackId = video.requestVideoFrameCallback(initWebGL);
+        //   const canvas = document.getElementById('webglCanvas');
+        // 3. 初始化 WebGL
+        const canvas = document.getElementById('webglCanvas');
+
+
+        const gl = canvas.getContext('webgl');
+        
+        // 4. 创建着色器程序
+        const program = gl.createProgram();
+        
+        // 顶点着色器
+        const vertShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertShader, `
+            attribute vec2 a_position;
+            varying vec2 v_texCoord;
+            void main() {
+                gl_Position = vec4(a_position, 0, 1);
+                v_texCoord = a_position * 0.5 + 0.5;
+            }
+        `);
+        gl.compileShader(vertShader);
+        
+        // 片段着色器
+        const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragShader, `
+            precision mediump float;
+            varying vec2 v_texCoord;
+            uniform sampler2D u_texture;
+            void main() {
+                gl_FragColor = texture2D(u_texture, v_texCoord);
+            }
+        `);
+        gl.compileShader(fragShader);
+
+        // 检查着色器编译状态
+        if (!gl.getShaderParameter(vertShader, gl.COMPILE_STATUS)) {
+            console.error('顶点着色器错误:', gl.getShaderInfoLog(vertShader));
+        }
+        if (!gl.getShaderParameter(fragShader, gl.COMPILE_STATUS)) {
+            console.error('片段着色器错误:', gl.getShaderInfoLog(fragShader));
+        }
+
+        // 附加着色器
+        gl.attachShader(program, vertShader);
+        gl.attachShader(program, fragShader);
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        // 5. 设置顶点缓冲区
+        const positions = new Float32Array([
+            -1, -1,  // 左下
+            1, -1,   // 右下
+            -1, 1,   // 左上
+            1, 1     // 右上
+        ]);
+        
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+        
+        // 6. 配置顶点属性
+        const positionLoc = gl.getAttribLocation(program, 'a_position');
+        gl.enableVertexAttribArray(positionLoc);
+        gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+
+        uRotateLoc = gl.getUniformLocation(program, 'u_rotate');
+        // 7. 创建纹理
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        // 8. 渲染循环
+        function render() {
+            if(isRendering){
+                if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+                    // 更新纹理
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+                    
+                    // 绘制
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                }
+                requestAnimationFrame(render);
+            }
+        }
+        isRendering = true;
+        render()
     }
 
     function stopRender() {
-        if (videoCallbackId!=null){
-            video.cancelVideoFrameCallback(videoCallbackId);
-            console.log("取消视频帧回调"+videoCallbackId);
-            videoCallbackId=null;
-        }
+        isRendering = false;
     }
  
-   
     
     function canvasSizev1() {
+        const canvas = document.getElementById('webglCanvas');
         const scale =  1;
         // 保持原有屏幕尺寸获取方式，但增加全屏判断
         let containerWidth = window.screen.availWidth * scale;
@@ -186,6 +258,8 @@
         console.log("_targetHeight"+_targetHeight);
         targetWidth=_targetWidth;
         targetHeight=_targetHeight;
+        const gl = canvas.getContext('webgl');
+        gl.viewport(0, 0,    canvas.width,   canvas.height );
     }
 </script>
 <script src="control.js"></script>

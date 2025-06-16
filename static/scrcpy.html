@@ -15,17 +15,11 @@
     }
     .video-box{
         position:relative;margin:0px auto;
-        justify-content: center; /* 水平居中 */
-        align-items: center;     /* 垂直居中 */
     }
     #remoteVideo {
         object-fit:contain; /* 保持比例完整显示 */
         width: 100%;   /* 填满父容器 */
         height: 100%;
-    }
-    #webglCanvas {
-        width: 600px;   /* 填满父容器 */
-        height: 600px;
     }
      /* 全屏模式优化 */
      :-webkit-full-screen .video-box {
@@ -184,8 +178,7 @@
         </div>
     </div>
 </div>
-    <video id="remoteVideo"  style="display: none;" autoplay ></video>
-    <canvas id="webglCanvas"   style="margin: auto auto;" ></canvas>
+    <video id="remoteVideo"   autoplay ></video>
     <div id="menuView">
            <svg class="control-btn play-btn" viewBox="0 0 24 24"  @click="togglePlay()">
             <path id="play-icon" d="M8 5v14l11-7z" v-show="!isPlaying"/>
@@ -234,7 +227,7 @@
           <svg class="control-btn" viewBox="0 0 24 24"  onclick="sendOffer(true)">
             <path d="M12 5V3L8 7l4 4V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
           </svg>
-
+          <span id="posx"></span>
       
     </div>
 </div>
@@ -247,82 +240,6 @@
 
 <script src="player.js"></script>
 <script src="comm.js"></script>
-<script>
-  
-  const canvas = document.getElementById('webglCanvas');
-  const ctx = canvas.getContext('2d');
-  const video = document.getElementById('remoteVideo');
-
-  video.addEventListener('play', () => {
-        initWebGL();
-        canvasSizev1();
-  });
-
-  video.addEventListener('pause', () => {
-        stopRender();
-  });
-  let videoCallbackId=null;
-    // 2. 初始化 WebGL 处理
-    function initWebGL() {
-        // 绘制当前视频帧到canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        videoCallbackId = video.requestVideoFrameCallback(initWebGL);
-    }
-
-    function stopRender() {
-        if (videoCallbackId!=null){
-            video.cancelVideoFrameCallback(videoCallbackId);
-            console.log("取消视频帧回调"+videoCallbackId);
-            videoCallbackId=null;
-        }
-    }
- 
-    
-    function canvasSizev1() {
-        const scale =  1;
-        // 保持原有屏幕尺寸获取方式，但增加全屏判断
-        let containerWidth = window.screen.availWidth * scale;
-        let containerHeight = window.screen.availHeight * scale;
-        console.log("containerWidth"+containerWidth);
-        console.log("containerHeight"+containerHeight);
-        let _targetWidth=0;
-        let _targetHeight=0;
-
-     
-        const videoAspect = videoWidth /  videoHeight;
-        const containerAspect = containerWidth / containerHeight;
-
-     
-
-        if (containerAspect > videoAspect) {
-            // 容器更宽：高度撑满，宽度按比例
-            _targetHeight = containerHeight;
-            _targetWidth = _targetHeight * videoAspect;
-            if(_targetWidth<containerWidth){
-                canvas.style.marginLeft = ((containerWidth-_targetWidth)/2)+'px';
-            }
-            canvas.style.marginTop ='0px';
-        } else {
-            // 容器更高：宽度撑满，高度按比例
-            _targetWidth = containerWidth;
-            _targetHeight = containerWidth / videoAspect;
-            if(_targetHeight<containerHeight){
-                canvas.style.marginTop = ((containerHeight-_targetHeight)/2)+'px';
-            }
-            canvas.style.marginLeft ='0px';
-        }
-
-        // 保持原有尺寸设置逻辑
-        canvas.style.width = `${_targetWidth}px`;
-        canvas.style.height = `${_targetHeight}px`;
-        canvas.width = _targetWidth;
-        canvas.height = _targetHeight;
-        console.log("_targetWidth"+_targetWidth);
-        console.log("_targetHeight"+_targetHeight);
-        targetWidth=_targetWidth;
-        targetHeight=_targetHeight;
-    }
-</script>
 <script src="connect.js"></script>
 <script src="control.js"></script>
 <script src="usb.js">    </script>

@@ -218,7 +218,7 @@ func (castx *Castx) SetControlConnectCall(_controlConnectCall func(net.Conn)) {
 // 读取协议头
 func (castx *Castx) readHeader(conn net.Conn) (int, error) {
 	buf := make([]byte, 4)
-	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 	conn.Read(buf)
 	conn.SetReadDeadline(time.Time{})
 	if string(buf) == "h264" || string(buf) == "h265" || string(buf) == "av1" {

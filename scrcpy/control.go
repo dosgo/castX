@@ -96,6 +96,7 @@ func controlCall(controlConn net.Conn, config *comm.Config, controlData map[stri
 			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
 			time.Sleep(time.Millisecond * time.Duration(mtRand(50, 90))) // 等待100毫秒
 			SendKTouchEvent(controlConn, ACTION_UP, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
+			fmt.Printf("left:%d,%d VideoWidth:%d VideoHeight:%d\r\n", x, y, config.VideoWidth, config.VideoHeight) // 打印 x 和 y 的
 		}
 	}
 	if controlData["type"] == "swipe" {

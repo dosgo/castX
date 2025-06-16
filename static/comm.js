@@ -76,7 +76,11 @@ ws.onmessage = (event) => {
 
 function login() {
     let authInfo= getToken()
-    let args={"maxSize":screen.width>screen.height?screen.width:screen.height}
+    let maxSize=screen.width>screen.height?screen.width:screen.height;
+    if (checkDevice() === 'mobile') {
+        maxSize=window.devicePixelRatio*maxSize;
+    }
+    let args={"maxSize":maxSize}
     args.timestamp=authInfo['timestamp'];
     args.token=authInfo['token'];
     ws.send(JSON.stringify({

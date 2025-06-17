@@ -119,8 +119,8 @@
     let videoCallbackId=null;
 
     video.addEventListener('play', () => {
-        initWebGL();
         canvasSizev1();
+        initWebGL();
     });
 
     video.addEventListener('pause', () => {

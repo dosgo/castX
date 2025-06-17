@@ -18,6 +18,9 @@ type ScrcpyReceiver struct {
 	run                bool
 	audioSampleRate    int
 	audioLastPts       int64
+	VideoType          string
+	h264Sps            []byte
+	h264Pps            []byte
 	controlConnectCall func(conn net.Conn) //控制消息回调
 }
 
@@ -92,8 +95,7 @@ func (castx *Castx) handleAudio(conn net.Conn) error {
 // 处理视频数据（保存为H264文件）
 func (castx *Castx) handleVideo(conn net.Conn) error {
 	data := make([]byte, 1024*1024*5)
-	sps := make([]byte, 0)
-	pps := make([]byte, 0)
+
 	startCode := []byte{0x00, 0x00, 0x00, 0x01}
 
 	frameHeader := &FrameHeader{}
@@ -112,25 +114,25 @@ func (castx *Castx) handleVideo(conn net.Conn) error {
 		nalType := data[4] & 0x1F // 取低5位
 		if nalType == 7 {
 			spsPpsInfo := bytes.Split(data[:frameHeader.DataLength], startCode)
-			sps = append(startCode, spsPpsInfo[1]...)
-			pps = append(startCode, spsPpsInfo[2]...)
+			castx.ScrcpyReceiver.h264Sps = append(startCode, spsPpsInfo[1]...)
+			castx.ScrcpyReceiver.h264Pps = append(startCode, spsPpsInfo[2]...)
 
-			castx.WebrtcServer.SendVideo(sps, int64(frameHeader.PTS))
-			castx.WebrtcServer.SendVideo(pps, int64(frameHeader.PTS))
-			pspInfo, _ := comm.ParseSPS(sps[4:])
+			castx.WebrtcServer.SendVideo(castx.ScrcpyReceiver.h264Sps, int64(frameHeader.PTS))
+			castx.WebrtcServer.SendVideo(castx.ScrcpyReceiver.h264Pps, int64(frameHeader.PTS))
+			pspInfo, _ := comm.ParseSPS(castx.ScrcpyReceiver.h264Sps[4:])
 
 			if pspInfo.Width != castx.Config.VideoWidth {
 				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, 0)
 			}
 			continue
 		}
-		if frameHeader.IsKeyFrame {
-			castx.WebrtcServer.SendVideo(sps, int64(frameHeader.PTS))
-			castx.WebrtcServer.SendVideo(pps, int64(frameHeader.PTS))
-			// 打印关键帧信息，实际使用时可以根据需要进行处理，这里仅打印示例
-		}
 		castx.WebrtcServer.SendVideo(data[:frameHeader.DataLength], int64(frameHeader.PTS))
 	}
+}
+
+func (castx *Castx) SendH264Head() {
+	castx.WebrtcServer.SendVideo(castx.ScrcpyReceiver.h264Sps, int64(0))
+	castx.WebrtcServer.SendVideo(castx.ScrcpyReceiver.h264Pps, int64(0))
 }
 
 // 处理单个Scrcpy连接
@@ -222,6 +224,7 @@ func (castx *Castx) readHeader(conn net.Conn) (int, error) {
 	conn.Read(buf)
 	conn.SetReadDeadline(time.Time{})
 	if string(buf) == "h264" || string(buf) == "h265" || string(buf) == "av1" {
+		castx.ScrcpyReceiver.VideoType = string(buf)
 		paramData := make([]byte, 8)
 		io.ReadFull(conn, paramData)
 		videoWidth := int(binary.BigEndian.Uint32(paramData[0:4]))

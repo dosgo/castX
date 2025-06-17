@@ -17,13 +17,13 @@ import (
 type WebrtcServer struct {
 	lastVideoTimestamp          int64
 	lastAudioTimestamp          int64
-	webRtcConnectionStateChange func(int)
+	webRtcConnectionStateChange func(int, int)
 	outboundVideoTrack          *webrtc.TrackLocalStaticSample
 	outboundAudioTrack          *webrtc.TrackLocalStaticSample
 	peerConnectionCount         int64
 }
 
-func (webrtcServer *WebrtcServer) SetWebRtcConnectionStateChange(_webRtcConnectionStateChange func(int)) {
+func (webrtcServer *WebrtcServer) SetWebRtcConnectionStateChange(_webRtcConnectionStateChange func(int, int)) {
 	webrtcServer.webRtcConnectionStateChange = _webRtcConnectionStateChange
 }
 
@@ -80,12 +80,12 @@ func (webrtcServer *WebrtcServer) getSdp(r io.Reader) (*webrtc.SessionDescriptio
 		if connectionState == webrtc.ICEConnectionStateDisconnected {
 			atomic.AddInt64(&webrtcServer.peerConnectionCount, -1)
 			if webrtcServer.webRtcConnectionStateChange != nil {
-				webrtcServer.webRtcConnectionStateChange(int(webrtcServer.peerConnectionCount))
+				webrtcServer.webRtcConnectionStateChange(int(webrtcServer.peerConnectionCount), int(webrtc.ICEConnectionStateDisconnected))
 			}
 		} else if connectionState == webrtc.ICEConnectionStateConnected {
 			atomic.AddInt64(&webrtcServer.peerConnectionCount, 1)
 			if webrtcServer.webRtcConnectionStateChange != nil {
-				webrtcServer.webRtcConnectionStateChange(int(webrtcServer.peerConnectionCount))
+				webrtcServer.webRtcConnectionStateChange(int(webrtcServer.peerConnectionCount), int(webrtc.ICEConnectionStateConnected))
 			}
 		}
 	})

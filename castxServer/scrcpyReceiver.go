@@ -12,11 +12,6 @@ import (
 	"github.com/dosgo/castX/comm"
 )
 
-type H264Head struct {
-	sps []byte
-	pps []byte
-}
-
 type ScrcpyReceiver struct {
 	listener           net.Listener
 	Counter            int
@@ -24,7 +19,6 @@ type ScrcpyReceiver struct {
 	audioSampleRate    int
 	audioLastPts       int64
 	VideoType          string
-	h264Head           H264Head
 	controlConnectCall func(conn net.Conn) //控制消息回调
 }
 
@@ -106,7 +100,8 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 
 	frameHeader := &FrameHeader{}
 	headerBuf := make([]byte, FRAME_HEADER_SIZE)
-
+	var h264Sps []byte
+	var h264Pps []byte
 	for {
 		err := readFrameHeader(conn, headerBuf, frameHeader)
 		if err != nil {
@@ -120,9 +115,10 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 		nalType := data[4] & 0x1F // 取低5位
 		if nalType == 7 {
 			spsPpsInfo := bytes.Split(data[:frameHeader.DataLength], startCode)
-			castx.ScrcpyReceiver.h264Head.sps = append(startCode, spsPpsInfo[1]...)
-			castx.ScrcpyReceiver.h264Head.pps = append(startCode, spsPpsInfo[2]...)
-			castx.SendH264Head()
+			h264Sps = append(startCode, spsPpsInfo[1]...)
+			h264Pps = append(startCode, spsPpsInfo[2]...)
+			castx.WebrtcServer.SendVideo(h264Sps, int64(0))
+			castx.WebrtcServer.SendVideo(h264Pps, int64(0))
 			pspInfo, _ := comm.ParseSPS(data[4:])
 			if pspInfo.Width != castx.Config.VideoWidth {
 				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, 0)
@@ -130,15 +126,11 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 			continue
 		}
 		if frameHeader.IsKeyFrame {
-			castx.SendH264Head()
+			castx.WebrtcServer.SendVideo(h264Sps, int64(0))
+			castx.WebrtcServer.SendVideo(h264Pps, int64(0))
 		}
 		castx.WebrtcServer.SendVideo(data[:frameHeader.DataLength], int64(frameHeader.PTS))
 	}
-}
-
-func (castx *Castx) SendH264Head() {
-	castx.WebrtcServer.SendVideo(castx.ScrcpyReceiver.h264Head.sps, int64(0))
-	castx.WebrtcServer.SendVideo(castx.ScrcpyReceiver.h264Head.pps, int64(0))
 }
 
 // 处理单个Scrcpy连接

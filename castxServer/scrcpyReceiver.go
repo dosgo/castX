@@ -63,7 +63,8 @@ func readFrameHeader(conn net.Conn, headBuf []byte, header *FrameHeader) error {
 }
 
 // 处理音频数据（示例仅打印信息）
-func (castx *Castx) handleAudio(conn net.Conn) error {
+func (castx *Castx) handleAudio(_conn net.Conn) error {
+	conn := comm.NewBufferedReadWriteCloser(_conn)
 	data := make([]byte, 65535)
 	var pts int64 = 0
 	frameHeader := &FrameHeader{}
@@ -97,7 +98,8 @@ func (castx *Castx) handleAudio(conn net.Conn) error {
 }
 
 // 处理视频数据（保存为H264文件）
-func (castx *Castx) handleVideo(conn net.Conn) error {
+func (castx *Castx) handleVideo(_conn net.Conn) error {
+	conn := comm.NewBufferedReadWriteCloser(_conn)
 	data := make([]byte, 1024*1024*5)
 
 	startCode := []byte{0x00, 0x00, 0x00, 0x01}

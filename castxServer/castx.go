@@ -36,7 +36,7 @@ func Start(webPort int, width int, height int, _mimeType string, useAdb bool, pa
 	castx.WsServer = comm.NewWs(castx.Config, castx.WebrtcServer)
 	castx.HttpServer, err = comm.StartWeb(webPort, castx.WsServer)
 	if receiverPort > 0 {
-		castx.ScrcpyReceiver = &ScrcpyReceiver{}
+		castx.ScrcpyReceiver = &ScrcpyReceiver{h264Head: H264Head{sps: []byte{}, pps: []byte{}}}
 		go castx.startReceiver(receiverPort)
 	}
 	return castx, nil

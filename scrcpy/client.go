@@ -19,15 +19,6 @@ func NewScrcpyClient(webPort int, peerName string, savaPath string, password str
 	scrcpyClient := &ScrcpyClient{}
 	reversePort := 6000
 	scrcpyClient.castx, _ = castxServer.Start(webPort, 0, 0, "", true, password, reversePort)
-	scrcpyClient.castx.WebrtcServer.SetWebRtcConnectionStateChange(func(count int, state int) {
-		//new connect send h264 head
-		if state == 3 {
-			if scrcpyClient.castx.ScrcpyReceiver.VideoType == "h264" {
-				scrcpyClient.castx.SendH264Head()
-			}
-		}
-	})
-
 	scrcpyClient.InitAdb(peerName, savaPath, reversePort)
 	return scrcpyClient
 }

@@ -74,12 +74,6 @@ func RegJavaClass(c JavaCallbackInterface) {
 	}
 	castx.WebrtcServer.SetWebRtcConnectionStateChange(func(count int, state int) {
 		javaObj.JavaCall.WebRtcConnectionStateChange(count)
-		//new connect send h264 head
-		if state == 3 {
-			if castx.ScrcpyReceiver.VideoType == "h264" {
-				castx.SendH264Head()
-			}
-		}
 	})
 	castx.WsServer.SetLoadInitFunc(func(data string) {
 		var dataInfo map[string]interface{}

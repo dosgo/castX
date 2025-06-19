@@ -102,6 +102,8 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 	headerBuf := make([]byte, FRAME_HEADER_SIZE)
 	var h264Sps []byte
 	var h264Pps []byte
+	var lastPts uint64
+	var sendPts uint64
 	for {
 		err := readFrameHeader(conn, headerBuf, frameHeader)
 		if err != nil {
@@ -117,8 +119,13 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 			spsPpsInfo := bytes.Split(data[:frameHeader.DataLength], startCode)
 			h264Sps = append(startCode, spsPpsInfo[1]...)
 			h264Pps = append(startCode, spsPpsInfo[2]...)
-			castx.WebrtcServer.SendVideo(h264Sps, int64(0))
-			castx.WebrtcServer.SendVideo(h264Pps, int64(0))
+
+			sendPts = lastPts
+			if frameHeader.PTS > 0 {
+				sendPts = frameHeader.PTS
+			}
+			castx.WebrtcServer.SendVideo(h264Sps, int64(sendPts))
+			castx.WebrtcServer.SendVideo(h264Pps, int64(sendPts))
 			pspInfo, _ := comm.ParseSPS(data[4:])
 			if pspInfo.Width != castx.Config.VideoWidth {
 				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, 0)
@@ -126,9 +133,10 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 			continue
 		}
 		if frameHeader.IsKeyFrame {
-			castx.WebrtcServer.SendVideo(h264Sps, int64(0))
-			castx.WebrtcServer.SendVideo(h264Pps, int64(0))
+			castx.WebrtcServer.SendVideo(h264Sps, int64(frameHeader.PTS))
+			castx.WebrtcServer.SendVideo(h264Pps, int64(frameHeader.PTS))
 		}
+		lastPts = frameHeader.PTS
 		//fmt.Printf("SendVideo pst:%d len:%d\r\n", frameHeader.PTS, frameHeader.DataLength)
 		castx.WebrtcServer.SendVideo(data[:frameHeader.DataLength], int64(frameHeader.PTS))
 	}

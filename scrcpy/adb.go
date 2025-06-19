@@ -94,7 +94,7 @@ func (scrcpyClient *ScrcpyClient) adbConnectOk(adbClient *libadb.AdbClient, savP
 		scid := GenerateSCID()
 		reverseErr := adbClient.Reverse(fmt.Sprintf("localabstract:scrcpy_%s", scid), fmt.Sprintf("tcp:%d", reversePort))
 		fmt.Printf("ReverseErr:%+v\r\n", reverseErr)
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 400)
 		//repeat-previous-frame-after=0
 		// audio-output-buffer=100 --audio-buffer=100
 		//'profile=4200,b-frames=0,preset=ultrafast'

@@ -88,7 +88,7 @@
           @click="selectType('wifi')" 
           :class="{ active: config.selectedType === 'wifi' }"
         >WiFi </button>
-        <button 
+        <button  v-show="usbSupport"
           @click="selectType('usb')" 
           :class="{ active: config.selectedType === 'usb' }"
         >USB </button>

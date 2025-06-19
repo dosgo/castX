@@ -62,6 +62,9 @@ func (webrtcServer *WebrtcServer) SendWebrtc(data []byte, timestamp int64, durat
 			Duration:  duration,
 			Timestamp: time.UnixMicro(timestamp),
 		})
+		if err != nil {
+			fmt.Printf("发送帧失败: %v\r\n", err)
+		}
 	}
 	return err
 }

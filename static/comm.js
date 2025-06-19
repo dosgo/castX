@@ -89,7 +89,15 @@ function login() {
     }));
 }
 function initWebRTC() {
-    pc = new RTCPeerConnection()
+    pc = new RTCPeerConnection({
+        // 关键参数：调整jitter buffer策略
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require',
+        // 开启抗抖动优化
+        enableRtpDataChannels: true,
+        // 调整jitter buffer的隐藏参数（非标准但有效）
+       // encodedInsertableStreams: true 
+      })
     pc.addTransceiver('video')
     pc.addTransceiver('audio')
 

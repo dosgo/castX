@@ -129,6 +129,7 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 			castx.WebrtcServer.SendVideo(h264Sps, int64(0))
 			castx.WebrtcServer.SendVideo(h264Pps, int64(0))
 		}
+		//fmt.Printf("SendVideo pst:%d len:%d\r\n", frameHeader.PTS, frameHeader.DataLength)
 		castx.WebrtcServer.SendVideo(data[:frameHeader.DataLength], int64(frameHeader.PTS))
 	}
 }

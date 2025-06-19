@@ -4,6 +4,7 @@ var appvm = Vue.createApp({
         return { 
             showMenu: false,
             isConnected: true,
+            usbSupport:window.isSecureContext,
             config:JSON.parse(localStorage.getItem('config')) || {"selectedType":"wifi"},
             lang:getLang(),//语言
         }

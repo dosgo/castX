@@ -75,12 +75,12 @@ ws.onmessage = (event) => {
 };
 
 function login() {
-    let authInfo= getToken()
+    let authInfo= getToken();
     let maxSize=screen.width>screen.height?screen.width:screen.height;
    
      maxSize=window.devicePixelRatio*maxSize;
     
-    let args={"maxSize":maxSize}
+    let args={"maxSize":maxSize};
     args.timestamp=authInfo['timestamp'];
     args.token=authInfo['token'];
     ws.send(JSON.stringify({
@@ -89,23 +89,15 @@ function login() {
     }));
 }
 function initWebRTC() {
-    pc = new RTCPeerConnection({
-        // 关键参数：调整jitter buffer策略
-        bundlePolicy: 'max-bundle',
-        rtcpMuxPolicy: 'require',
-        // 开启抗抖动优化
-        enableRtpDataChannels: true,
-        // 调整jitter buffer的隐藏参数（非标准但有效）
-       // encodedInsertableStreams: true 
-      })
-    pc.addTransceiver('video')
-    pc.addTransceiver('audio')
+    pc = new RTCPeerConnection();
+    pc.addTransceiver('video');
+    pc.addTransceiver('audio');
 
-    pc.oniceconnectionstatechange = () => log(pc.iceConnectionState)
+    pc.oniceconnectionstatechange = () => log(pc.iceConnectionState);
     pc.ontrack = function (event) {
         if (event.track.kind === 'video') {
                 console.log('收到视频轨道');
-                remoteVideo.autoplay = true
+                remoteVideo.autoplay = true;
                 remoteVideo.muted = false; 
                 remoteVideo.srcObject = event.streams[0];
                 console.log( 'streams',event.streams[0]);
@@ -141,8 +133,8 @@ function swipe(code) {
 }
 
 
-function mouseClick(type,x,y,touch) {
-    var args=  JSON.stringify({"type":type,"x":x,"y":y,"videoWidth":videoWidth,"videoHeight":videoHeight,'touch':touch})   
+function mouseClick(type,x,y,duration) {
+    var args=  JSON.stringify({"type":type,"x":x,"y":y,"videoWidth":videoWidth,"videoHeight":videoHeight,'duration':duration})   
     ws.send(JSON.stringify({
         type: 'control',
         data: args

@@ -10,6 +10,7 @@ if (document.getElementById('webglCanvas')) {
 let isPointerDown = false;
 var startX=0;
 var startY=0;
+var startTime=0;
 var touchNum=10;
 var lastX=0;
 var lastY=0;
@@ -33,7 +34,8 @@ function panstart(e){
   startY=clientY;
   var pos= fixXy(clientX,clientY);
   console.log(`pos`, pos);
-  mouseClick('panstart', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, 2);
+  startTime=Date.now();
+  mouseClick('panstart', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, 0);
 }
 // 指针移动
 videoObj.addEventListener('pointermove', (e) => {
@@ -54,7 +56,7 @@ videoObj.addEventListener('pointermove', (e) => {
   lastY=clientY;
   var pos= fixXy(clientX,clientY);
   console.log(`pos`, pos);
-  mouseClick('pan', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, 2);
+  mouseClick('pan', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, 0);
 
 });
 
@@ -97,12 +99,14 @@ function clickUp(e,outside) {
     if(Math.abs(clientX-startX)  < touchNum&&  Math.abs(clientY  -startY ) < touchNum || !isPointerDown ){
       startX=0;
       startY=0; 
-      mouseClick('left', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, 2);
+      let duration = Date.now() - startTime;
+      startTime=0;
+      mouseClick('click', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, duration);
       isPointerDown = false;
       return; // 忽略点击事件，防止误触
     }
     isPointerDown = false;
-    mouseClick('panend', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, 2);
+    mouseClick('panend', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, 0);
 
 }
 

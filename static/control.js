@@ -100,6 +100,9 @@ function clickUp(e,outside) {
       startX=0;
       startY=0; 
       let duration = Date.now() - startTime;
+      if(duration<20){
+        duration=20;
+      }
       startTime=0;
       mouseClick('click', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, duration);
       isPointerDown = false;
@@ -107,7 +110,7 @@ function clickUp(e,outside) {
     }
     isPointerDown = false;
     mouseClick('panend', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, 0);
-
+    startTime=0;
 }
 
 

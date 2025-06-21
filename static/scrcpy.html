@@ -59,10 +59,9 @@
     transform-style: preserve-3d; /* 穿透层叠限制 */
     }
 </style>
-<body>
+<body style="margin: 0px;padding: 0px;">
 
 
-<br/>
 <div id="app">
     <div class="connection-status" :class="{ connected: isConnected }">
       {{isConnected?'已连接':'未连接'}}

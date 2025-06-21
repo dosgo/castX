@@ -130,8 +130,12 @@ function fixXy( relativeX, relativeY){
   let displayWidth =0;
   let displayHeight=0;
   if (!isCanvas) {
-     displayWidth = videoRect.width ;  // 显示宽度（物理像素）
-     displayHeight = videoRect.height ; // 显示高度（物理像素）
+     displayWidth =remoteVideo.clientWidth;  //videoRect.width ;  // 显示宽度（物理像素）
+     displayHeight =remoteVideo.clientHeight;// videoRect.height ; // 显示高度（物理像素）
+
+
+     
+  console.log("eeeedisplayWidth"+ displayWidth );
     calculateSize(); // 
     if(displayWidth>targetWidth){
         relativeX=relativeX-(displayWidth-targetWidth)/2;
@@ -158,7 +162,7 @@ function fixXy( relativeX, relativeY){
 
  
   remoteX = Math.round((relativeX) * (videoWidth /displayWidth));
-   remoteY = Math.round((relativeY)* (videoHeight / displayHeight));
+  remoteY = Math.round((relativeY)* (videoHeight / displayHeight));
   return {remoteX, remoteY};
 }
 

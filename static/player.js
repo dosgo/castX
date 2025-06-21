@@ -2,8 +2,8 @@
     function calculateSize() {
         const scale =  1;
         // 保持原有屏幕尺寸获取方式，但增加全屏判断
-        let containerWidth = window.screen.availWidth * scale;
-        let containerHeight = window.screen.availHeight * scale;
+        let containerWidth = window.screen.width * scale;
+        let containerHeight = window.screen.height * scale;
         let _targetWidth=0;
         let _targetHeight=0;
 
@@ -14,10 +14,15 @@
             // 容器更宽：高度撑满，宽度按比例
             _targetHeight = containerHeight;
             _targetWidth = _targetHeight * videoAspect;
+
+            console.log("1videoAspect:"+videoAspect)
+            console.log("111_targetHeight:"+_targetHeight)
         } else {
             // 容器更高：宽度撑满，高度按比例
             _targetWidth = containerWidth;
             _targetHeight = containerWidth / videoAspect;
+            console.log("videoAspect:"+videoAspect)
+            console.log("ccccontainerWidth:"+containerWidth)
         }
         targetWidth=_targetWidth;
         targetHeight=_targetHeight;

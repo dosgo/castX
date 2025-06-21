@@ -130,9 +130,9 @@ function fixXy( relativeX, relativeY){
   let displayWidth =0;
   let displayHeight=0;
   if (!isCanvas) {
-     displayWidth =remoteVideo.clientWidth;  //videoRect.width ;  // 显示宽度（物理像素）
-     displayHeight =remoteVideo.clientHeight;// videoRect.height ; // 显示高度（物理像素）
-
+     displayWidth =  videoRect.width ;  // 显示宽度（物理像素）
+     displayHeight = videoRect.height ; // 显示高度（物理像素）
+    console.log("videoRect left"+videoRect.left)
 
      
   console.log("eeeedisplayWidth"+ displayWidth );

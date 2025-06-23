@@ -2,8 +2,15 @@
     function calculateSize() {
         const scale =  1;
         // 保持原有屏幕尺寸获取方式，但增加全屏判断
-        let containerWidth = window.screen.width * scale;
-        let containerHeight = window.screen.height * scale;
+       // let containerWidth = window.screen.width * scale;
+       // let containerHeight = window.screen.height * scale;
+
+        const videoRect = remoteVideo.getBoundingClientRect();
+
+       let  containerWidth =  videoRect.width ;  // 显示宽度（物理像素）
+       let containerHeight = videoRect.height ; // 显示高度（物理像素）
+
+
         let _targetWidth=0;
         let _targetHeight=0;
 

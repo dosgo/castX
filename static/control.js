@@ -93,7 +93,7 @@ function clickUp(e,outside) {
     console.log(`clientX`, clientX);
     console.log(`clientY`, clientY);
     var pos= fixXy(clientX,clientY);
-    console.log(`pos`, pos);
+    console.log(`clickUp pos`, pos);
 
   
     if(Math.abs(clientX-startX)  < touchNum&&  Math.abs(clientY  -startY ) < touchNum || !isPointerDown ){
@@ -122,9 +122,6 @@ function fixXy( relativeX, relativeY){
   const videoRect = remoteVideo.getBoundingClientRect();
 
 
-  console.log("relativeX:"+ relativeX);
-  console.log("relativeY:"+ relativeY);
-
 
   // 5. 计算实际视频区域（剔除黑边）
   let displayWidth =0;
@@ -132,10 +129,7 @@ function fixXy( relativeX, relativeY){
   if (!isCanvas) {
      displayWidth =  videoRect.width ;  // 显示宽度（物理像素）
      displayHeight = videoRect.height ; // 显示高度（物理像素）
-    console.log("videoRect left"+videoRect.left)
 
-     
-  console.log("eeeedisplayWidth"+ displayWidth );
     calculateSize(); // 
     if(displayWidth>targetWidth){
         relativeX=relativeX-(displayWidth-targetWidth)/2;
@@ -155,10 +149,6 @@ function fixXy( relativeX, relativeY){
      displayWidth = targetWidth ;  // 显示宽度（物理像素）
      displayHeight =targetHeight ; // 显示高度（物理像素）
   }
-
-
-  console.log("displayWidth"+ displayWidth );
-  console.log("displayHeight"+ displayHeight);
 
  
   remoteX = Math.round((relativeX) * (videoWidth /displayWidth));

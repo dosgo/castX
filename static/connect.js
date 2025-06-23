@@ -22,7 +22,6 @@ var appvm = Vue.createApp({
         },
        
         connectUsb(device) {
-          console.log('Connecting to:', device.name)
           // 这里添加USB连接逻辑
           this.isConnected = true
           this.showMenu = false

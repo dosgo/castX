@@ -89,7 +89,6 @@ function clickUp(e,outside) {
     console.log(`clientY`, clientY);
     var pos= fixXy(clientX,clientY);
     console.log(`clickUp pos`, pos);
-
   
     if(Math.abs(clientX-startX)  < touchNum&&  Math.abs(clientY  -startY ) < touchNum || !isPointerDown ){
       startX=0;
@@ -108,41 +107,32 @@ function clickUp(e,outside) {
     startTime=0;
 }
 
-
-
-
-
-
+/** */
 function fixXy( relativeX, relativeY){
   const videoRect = remoteVideo.getBoundingClientRect();
+  // 视频标签大小
+  let displayWidth = videoRect.width ; 
+  let displayHeight=videoRect.height ;
 
-
-
-  // 5. 计算实际视频区域（剔除黑边）
-  let displayWidth =0;
-  let displayHeight=0;
-  
-     displayWidth =  videoRect.width ;  // 显示宽度（物理像素）
-     displayHeight = videoRect.height ; // 显示高度（物理像素）
-
-    calculateSize(); // 
-    if(displayWidth>targetWidth){
-        relativeX=relativeX-(displayWidth-targetWidth)/2;
-        if(relativeX<0){
-            relativeX=0;
-        }
-        displayWidth=targetWidth;
-    }
-    if(displayHeight>targetHeight){
-        relativeY=relativeY-(displayHeight-targetHeight)/2;
-        if(relativeY<0){
-            relativeY=0;
-        }
-        displayHeight=targetHeight;
-    }
-  
-
- 
+  //计算视频实际大小
+  calculateSize(); // 
+  if(displayWidth>targetWidth){
+      //减去坐左边的黑边
+      relativeX=relativeX-(displayWidth-targetWidth)/2;
+      if(relativeX<0){
+          relativeX=0;
+      }
+      displayWidth=targetWidth;
+  }
+  if(displayHeight>targetHeight){
+    //减去上遍的黑边
+      relativeY=relativeY-(displayHeight-targetHeight)/2;
+      if(relativeY<0){
+          relativeY=0;
+      }
+      displayHeight=targetHeight;
+  }
+  //修复真实的坐标映射
   remoteX = Math.round((relativeX) * (videoWidth /displayWidth));
   remoteY = Math.round((relativeY)* (videoHeight / displayHeight));
   return {remoteX, remoteY};

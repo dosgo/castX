@@ -129,8 +129,8 @@ func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		wsServer.connectionManager.Remove(conn)
 	}()
 	wsServer.SendInitConfig(conn)
+	var msg WSMessage
 	for {
-		var msg WSMessage
 		err := conn.ReadJSON(&msg)
 		if err != nil {
 			break

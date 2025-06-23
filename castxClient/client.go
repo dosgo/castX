@@ -1,34 +1,104 @@
-package comm
+package castxClient
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"log"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
+	"time"
 
+	"github.com/dosgo/castX/comm"
+	"github.com/gorilla/websocket"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v3"
 	"github.com/wlynxg/anet"
 )
 
-type WebrtcReceive struct {
-	receiveCall func(int, []byte, int64)
+type CastXClient struct {
+	wsConn         *websocket.Conn
+	isAuth         bool
+	securityKey    string
+	peerConnection *webrtc.PeerConnection
 }
 
-func (webrtcReceive *WebrtcReceive) SetReceiveCall(compare func(int, []byte, int64)) {
-	webrtcReceive.receiveCall = compare
+func (client *CastXClient) Start(wsUrl string, password string, maxSize int) error {
+	var err error
+	client.wsConn, _, err = websocket.DefaultDialer.Dial(wsUrl, nil)
+	if err != nil {
+		return err
+	}
+	// 消息接收协程
+	go client.WsRecv(password, maxSize)
+	return nil
 }
 
-func (webrtcReceive *WebrtcReceive) StartWebRtcReceive(url string, writeFile bool) error {
+func (client *CastXClient) login(password string, maxSize int) {
+	timestamp := time.Now().UnixMilli()
+	var srcData = client.securityKey + "|" + strconv.FormatInt(int64(timestamp), 10) + "|" + password
+	sum := sha256.Sum256([]byte(srcData))
+	token := hex.EncodeToString(sum[:])
+	args := map[string]interface{}{
+		"maxSize":   maxSize,
+		"token":     token,
+		"timestamp": timestamp,
+	}
+	argsStr, _ := json.Marshal(args)
+	fmt.Print("asksStr:")
+	//登录
+	client.wsConn.WriteJSON(comm.WSMessage{
+		Type: comm.MsgTypeLoginAuth,
+		Data: string(argsStr),
+	})
+}
+func (client *CastXClient) WsRecv(password string, maxSize int) {
+	var msg comm.WSMessage
+	defer func() {
+		fmt.Printf("ws closed\r\n")
+	}()
+	for {
+		err := client.wsConn.ReadJSON(&msg)
+		if err != nil {
+			log.Println("read error:", err)
+			return
+		}
+		log.Printf("received: %s", msg)
+		switch msg.Type {
+		case comm.MsgTypeLoginAuthResp:
+			data := msg.Data.(map[string]interface{})
+			if data["auth"].(bool) {
+				client.isAuth = true
+				client.StartWebRtcReceive()
+			}
+		case comm.MsgTypeInitConfig:
+			data := msg.Data.(map[string]interface{})
+			client.securityKey = data["securityKey"].(string)
+			client.login(password, maxSize)
+		case comm.MsgTypeOfferResp:
+			data := msg.Data.(map[string]interface{})
+			answerStr, _ := json.Marshal(data["sdp"])
+			var answer webrtc.SessionDescription
+			json.NewDecoder(bytes.NewBuffer([]byte(answerStr))).Decode(&answer)
+			// 设置远程描述
+			if err = client.peerConnection.SetRemoteDescription(answer); err != nil {
+				fmt.Printf("StartWebRtcReceive err:%+v\n", err)
+			}
+		}
+
+	}
+}
+
+func (client *CastXClient) StartWebRtcReceive() error {
 	if runtime.GOOS == "android" {
 		anet.SetAndroidVersion(14)
 	}
-	depacketizer := NewH264Depacketizer(webrtcReceive, writeFile)
+	depacketizer := NewH264Depacketizer()
 	// WebRTC配置
 	config := webrtc.Configuration{}
 	// 创建PeerConnection
@@ -75,30 +145,20 @@ func (webrtcReceive *WebrtcReceive) StartWebRtcReceive(url string, writeFile boo
 	if err = peerConnection.SetLocalDescription(offer); err != nil {
 		return err
 	}
+	client.peerConnection = peerConnection
 	<-gatherCompletePromise
-
 	// 发送Offer到信令服务
-	answer := getOffer(*peerConnection.LocalDescription(), url)
-
-	// 设置远程描述
-	if err = peerConnection.SetRemoteDescription(answer); err != nil {
-		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
-		return err
-	}
+	client.getOffer(*peerConnection.LocalDescription())
 	return nil
 }
 
 // 信令交互
-func getOffer(offer webrtc.SessionDescription, url string) webrtc.SessionDescription {
+func (client *CastXClient) getOffer(offer webrtc.SessionDescription) {
 	offerJSON, _ := json.Marshal(offer)
-	resp, _ := http.Post(url, "application/json", bytes.NewReader(offerJSON))
-	var data = make(map[string]interface{})
-	json.NewDecoder(resp.Body).Decode(&data)
-	answerStr, _ := json.Marshal(data["sdp"])
-	fmt.Printf("answerStr:%s\r\n", answerStr)
-	var answer webrtc.SessionDescription
-	json.NewDecoder(bytes.NewBuffer([]byte(answerStr))).Decode(&answer)
-	return answer
+	client.wsConn.WriteJSON(comm.WSMessage{
+		Type: comm.MsgTypeOffer,
+		Data: string(offerJSON),
+	})
 }
 
 type H264Depacketizer struct {
@@ -108,19 +168,10 @@ type H264Depacketizer struct {
 	fragmentBuffer []byte
 	lastTimestamp  uint32
 	mu             sync.Mutex
-	writeFile      bool
-	webrtcReceive  *WebrtcReceive
 }
 
-func NewH264Depacketizer(webrtcReceive *WebrtcReceive, _writeFile bool) *H264Depacketizer {
-	h264Decode := &H264Depacketizer{
-		writeFile: _writeFile,
-	}
-	if _writeFile {
-		f, _ := os.Create("output.264")
-		h264Decode.file = f
-	}
-	h264Decode.webrtcReceive = webrtcReceive
+func NewH264Depacketizer() *H264Depacketizer {
+	h264Decode := &H264Depacketizer{}
 	return h264Decode
 }
 
@@ -195,41 +246,23 @@ func (d *H264Depacketizer) processSTAPA(payload []byte, timestamp uint32) {
 
 func (d *H264Depacketizer) writeNALU(nalu []byte, timestamp int64) {
 	naluType := nalu[0] & 0x1F
-	startCode := []byte{0x00, 0x00, 0x00, 0x01}
+	//startCode := []byte{0x00, 0x00, 0x00, 0x01}
 	// 提取参数集
 	switch naluType {
 	case 7: // SPS
 		d.sps = append([]byte{}, nalu...)
-		if d.webrtcReceive.receiveCall != nil {
-			d.webrtcReceive.receiveCall(2, nalu, timestamp)
-		}
 
-		if d.writeFile {
-			d.file.Write(startCode)
-			d.file.Write(d.sps)
-		}
 		fmt.Printf("Got SPS: %s\n", hex.EncodeToString(nalu))
 	case 8: // PPS
-		if d.webrtcReceive.receiveCall != nil {
-			d.webrtcReceive.receiveCall(3, nalu, timestamp)
-		}
+
 		d.pps = append([]byte{}, nalu...)
-		if d.writeFile {
-			d.file.Write(startCode)
-			d.file.Write(d.pps)
-		}
+
 		fmt.Printf("Got PPS: %s\n", hex.EncodeToString(nalu))
 
 	}
 
 	// 实时解码示例（需实现解码器接口）
 	if naluType == 1 || naluType == 5 {
-		if d.webrtcReceive.receiveCall != nil {
-			d.webrtcReceive.receiveCall(1, nalu, timestamp)
-		}
-		if d.writeFile {
-			d.file.Write(startCode)
-			d.file.Write(nalu)
-		}
+		fmt.Printf("h264 data\r\n")
 	}
 }

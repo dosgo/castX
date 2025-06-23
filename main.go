@@ -18,7 +18,7 @@ func main() {
 	bounds := screenshot.GetDisplayBounds(0)
 	castx, _ := castxServer.Start(8081, bounds.Dx(), bounds.Dy(), "", false, "123456", 0)
 	castx.WsServer.SetControlFun(func(controlData map[string]interface{}) {
-		if controlData["type"] == "left" {
+		if controlData["type"] == "click" {
 			if f, ok := controlData["x"].(float64); ok {
 				x := int(f)
 				y := int(controlData["y"].(float64))
@@ -26,6 +26,15 @@ func main() {
 				robotgo.Click("left", false)
 			}
 		}
+		if controlData["type"] == "rightClick" {
+			if f, ok := controlData["x"].(float64); ok {
+				x := int(f)
+				y := int(controlData["y"].(float64))
+				robotgo.Move(x, y)
+				robotgo.Click("right", false)
+			}
+		}
+
 	})
 
 	go ffmpegDesktop(false, castx.WebrtcServer)

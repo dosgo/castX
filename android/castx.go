@@ -5,14 +5,15 @@ package castX
 import (
 	"encoding/json"
 
+	"github.com/dosgo/castX/castxClient"
 	"github.com/dosgo/castX/castxServer"
-	"github.com/dosgo/castX/comm"
+
 	"github.com/dosgo/castX/scrcpy"
 	_ "golang.org/x/mobile/bind"
 )
 
 var castx *castxServer.Castx
-var webrtcReceive *comm.WebrtcReceive
+var castXClient *castxClient.CastXClient
 var scrcpyClient *scrcpy.ScrcpyClient
 
 func Start(webPort int, width int, height int, mimeType string, password string, receiverPort int) {
@@ -45,8 +46,7 @@ func Shutdown() {
 }
 
 type JavaCallbackInterface interface {
-	CallString(param string)
-	CallBytes(cmd int, param []byte, timestamp int64)
+	ControlCall(param string)
 	WebRtcConnectionStateChange(count int)
 	SetMaxSize(maxsize int)
 }
@@ -64,14 +64,9 @@ func RegJavaClass(c JavaCallbackInterface) {
 	castx.WsServer.SetControlFun(func(data map[string]interface{}) {
 		jsonStr, err := json.Marshal(data)
 		if err == nil {
-			javaObj.JavaCall.CallString(string(jsonStr))
+			javaObj.JavaCall.ControlCall(string(jsonStr))
 		}
 	})
-	if webrtcReceive != nil {
-		webrtcReceive.SetReceiveCall(func(cmd int, data []byte, timestamp int64) {
-			javaObj.JavaCall.CallBytes(cmd, data, timestamp)
-		})
-	}
 	castx.WebrtcServer.SetWebRtcConnectionStateChange(func(count int, state int) {
 		javaObj.JavaCall.WebRtcConnectionStateChange(count)
 	})
@@ -90,9 +85,9 @@ func RegJavaClass(c JavaCallbackInterface) {
 	})
 }
 
-func StartWebRtcReceive(url string) {
-	webrtcReceive = &comm.WebrtcReceive{}
-	webrtcReceive.StartWebRtcReceive(url, false)
+func StartCastXClient(url string, password string, maxsize int) {
+	castXClient = &castxClient.CastXClient{}
+	castXClient.Start(url, password, maxsize)
 }
 
 func SetSize(videoWidth int, videoHeight int, orientation int) {

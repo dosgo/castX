@@ -98,7 +98,11 @@ function clickUp(e,outside) {
         duration=20;
       }
       startTime=0;
-      mouseClick('click', Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, duration);
+      var clickType="click";
+      if (e.button === 2) {
+          clickType="rightClick";
+      }
+      mouseClick(clickType, Number.isNaN(pos.remoteX) ? 0:pos.remoteX,Number.isNaN(pos.remoteY)?0:pos.remoteY, duration);
       isPointerDown = false;
       return; // 忽略点击事件，防止误触
     }

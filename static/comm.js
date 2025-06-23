@@ -39,10 +39,6 @@ ws.onmessage = (event) => {
 
             }
         }
-        //如果是canvas渲染
-        if (typeof canvasSizev1 === 'function') {
-            canvasSizev1(); // 
-        }
     }
     //初始化配置
     if (msg.type === 'initConfig') {

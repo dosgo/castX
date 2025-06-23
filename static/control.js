@@ -1,10 +1,5 @@
 
 var videoObj = document.getElementById('remoteVideo');
-var isCanvas=false;
-if (document.getElementById('webglCanvas')) {
-   videoObj = document.getElementById('webglCanvas');
-   isCanvas=true;
-}
 
 // 指针按下（兼容鼠标、触摸）
 let isPointerDown = false;
@@ -126,7 +121,7 @@ function fixXy( relativeX, relativeY){
   // 5. 计算实际视频区域（剔除黑边）
   let displayWidth =0;
   let displayHeight=0;
-  if (!isCanvas) {
+  
      displayWidth =  videoRect.width ;  // 显示宽度（物理像素）
      displayHeight = videoRect.height ; // 显示高度（物理像素）
 
@@ -145,10 +140,7 @@ function fixXy( relativeX, relativeY){
         }
         displayHeight=targetHeight;
     }
-  }else{
-     displayWidth = targetWidth ;  // 显示宽度（物理像素）
-     displayHeight =targetHeight ; // 显示高度（物理像素）
-  }
+  
 
  
   remoteX = Math.round((relativeX) * (videoWidth /displayWidth));
@@ -156,14 +148,3 @@ function fixXy( relativeX, relativeY){
   return {remoteX, remoteY};
 }
 
-if (isCanvas){
-  
-  if (document.getElementById('videoBox')) {
-   let  videoBox = document.getElementById('videoBox');
-    videoBox.addEventListener('pointerup', (e) => {
-      if (isPointerDown){
-        clickUp(e,true);
-      }
-    });
- }
-}

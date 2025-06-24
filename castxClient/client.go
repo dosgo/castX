@@ -36,6 +36,8 @@ func (client *CastXClient) Start(wsUrl string, password string, maxSize int) int
 	if err != nil {
 		return 0
 	}
+	client.audioConn = make(map[string]net.Conn)
+	client.videoConn = make(map[string]net.Conn)
 	//init websrc
 	client.initWebRtc()
 	// 消息接收协程
@@ -152,9 +154,7 @@ func (client *CastXClient) initWebRtc() error {
 			}()
 		}
 		if track.Codec().MimeType == "audio/opus" {
-			go func() {
-
-			}()
+			fmt.Printf("eeee\r\n")
 		}
 	})
 	return nil
@@ -216,7 +216,7 @@ func (client *CastXClient) startSendListen() {
 	}()
 }
 
-func (client *CastXClient) sendVidee(data []byte, pts uint64, isKeyFrame bool) {
+func (client *CastXClient) sendVideo(data []byte, pts uint64, isKeyFrame bool) {
 	client.videomu.RLock()
 	defer client.videomu.RUnlock()
 	var err error

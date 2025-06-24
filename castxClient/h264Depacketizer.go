@@ -112,19 +112,18 @@ func (d *H264Depacketizer) writeNALU(nalu []byte, timestamp int64) {
 	isKeyFrame := false
 	// 实时解码示例（需实现解码器接口）
 	if naluType == 1 || naluType == 5 {
-		fmt.Printf("h264 data\r\n")
 		if naluType == 5 {
 			isKeyFrame = true
 		}
 	}
 	//sps  pps
 	if naluType == 1 || naluType == 5 || naluType == 7 || naluType == 8 {
-		d.client.sendVidee(append(startCode, nalu...), uint64(timestamp), isKeyFrame)
+		d.client.sendVideo(append(startCode, nalu...), uint64(timestamp), isKeyFrame)
 	}
 }
 
 func writeFrameHeader(conn net.Conn, data []byte, pts uint64, isKeyFrame bool) error {
-	var buffer *bytes.Buffer
+	var buffer = &bytes.Buffer{}
 	var PACKET_FLAG_KEY_FRAME uint64 = 1 << 62
 	var ptsAndFlags = pts
 	if isKeyFrame {

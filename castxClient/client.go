@@ -40,7 +40,7 @@ func (client *CastXClient) Start(wsUrl string, password string, maxSize int) int
 	client.initWebRtc()
 	// 消息接收协程
 	go client.WsRecv(password, maxSize)
-	go client.startSendListen()
+	client.startSendListen()
 	// 获取实际分配的端口
 	if client.listener != nil {
 		addr := client.listener.Addr().(*net.TCPAddr)
@@ -196,23 +196,24 @@ func (client *CastXClient) startSendListen() {
 	}
 	client.run = true
 	// 主接收循环
-
-	for client.run {
-		conn, err := client.listener.Accept()
-		if err != nil {
-			fmt.Printf("接受连接失败: %v\n", err)
-			break
+	go func() {
+		for client.run {
+			conn, err := client.listener.Accept()
+			if err != nil {
+				fmt.Printf("接受连接失败: %v\n", err)
+				break
+			}
+			buf := make([]byte, 5)
+			conn.Read(buf)
+			if string(buf) == "video" {
+				client.videoConn[conn.RemoteAddr().String()] = conn
+			} else if string(buf) == "audio" {
+				client.audioConn[conn.RemoteAddr().String()] = conn
+			} else {
+				conn.Close()
+			}
 		}
-		buf := make([]byte, 5)
-		conn.Read(buf)
-		if string(buf) == "video" {
-			client.videoConn[conn.RemoteAddr().String()] = conn
-		} else if string(buf) == "audio" {
-			client.audioConn[conn.RemoteAddr().String()] = conn
-		} else {
-			conn.Close()
-		}
-	}
+	}()
 }
 
 func (client *CastXClient) sendVidee(data []byte, pts uint64, isKeyFrame bool) {

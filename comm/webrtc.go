@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"runtime"
 	"sync/atomic"
 	"time"
 
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
-	"github.com/wlynxg/anet"
 )
 
 type WebrtcServer struct {
@@ -72,9 +70,6 @@ func (webrtcServer *WebrtcServer) SendWebrtc(data []byte, timestamp int64, durat
 // HTTP Handler that accepts an Offer and returns an Answer
 // adds outboundVideoTrack to PeerConnection
 func (webrtcServer *WebrtcServer) getSdp(r io.Reader) (*webrtc.SessionDescription, error) {
-	if runtime.GOOS == "android" {
-		anet.SetAndroidVersion(14)
-	}
 	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{})
 	if err != nil {
 		return nil, err

@@ -1,9 +1,11 @@
 package castxClient
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"net"
 	"os"
 	"sync"
 
@@ -17,10 +19,12 @@ type H264Depacketizer struct {
 	fragmentBuffer []byte
 	lastTimestamp  uint32
 	mu             sync.Mutex
+	client         *CastXClient
 }
 
-func NewH264Depacketizer() *H264Depacketizer {
+func NewH264Depacketizer(client *CastXClient) *H264Depacketizer {
 	h264Decode := &H264Depacketizer{}
+	h264Decode.client = client
 	return h264Decode
 }
 
@@ -95,23 +99,40 @@ func (d *H264Depacketizer) processSTAPA(payload []byte, timestamp uint32) {
 
 func (d *H264Depacketizer) writeNALU(nalu []byte, timestamp int64) {
 	naluType := nalu[0] & 0x1F
-	//startCode := []byte{0x00, 0x00, 0x00, 0x01}
+	startCode := []byte{0x00, 0x00, 0x00, 0x01}
 	// 提取参数集
 	switch naluType {
 	case 7: // SPS
 		d.sps = append([]byte{}, nalu...)
-
 		fmt.Printf("Got SPS: %s\n", hex.EncodeToString(nalu))
 	case 8: // PPS
-
 		d.pps = append([]byte{}, nalu...)
-
 		fmt.Printf("Got PPS: %s\n", hex.EncodeToString(nalu))
-
 	}
-
+	isKeyFrame := false
 	// 实时解码示例（需实现解码器接口）
 	if naluType == 1 || naluType == 5 {
 		fmt.Printf("h264 data\r\n")
+		if naluType == 5 {
+			isKeyFrame = true
+		}
 	}
+	//sps  pps
+	if naluType == 1 || naluType == 5 || naluType == 7 || naluType == 8 {
+		d.client.sendVidee(append(startCode, nalu...), uint64(timestamp), isKeyFrame)
+	}
+}
+
+func writeFrameHeader(conn net.Conn, data []byte, pts uint64, isKeyFrame bool) error {
+	var buffer *bytes.Buffer
+	var PACKET_FLAG_KEY_FRAME uint64 = 1 << 62
+	var ptsAndFlags = pts
+	if isKeyFrame {
+		ptsAndFlags |= PACKET_FLAG_KEY_FRAME
+	}
+	binary.Write(buffer, binary.BigEndian, ptsAndFlags)
+	binary.Write(buffer, binary.BigEndian, uint32(len(data)))
+	conn.Write(buffer.Bytes())
+	_, err := conn.Write(data)
+	return err
 }

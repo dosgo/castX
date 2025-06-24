@@ -7,34 +7,62 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"runtime"
+	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/dosgo/castX/comm"
 	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v3"
-	"github.com/wlynxg/anet"
 )
 
 type CastXClient struct {
 	wsConn         *websocket.Conn
 	isAuth         bool
 	securityKey    string
+	listener       net.Listener
+	run            bool
+	videomu        sync.RWMutex
+	videoConn      map[string]net.Conn
+	audioConn      map[string]net.Conn
+	audiomu        sync.RWMutex
 	peerConnection *webrtc.PeerConnection
 }
 
-func (client *CastXClient) Start(wsUrl string, password string, maxSize int) error {
+func (client *CastXClient) Start(wsUrl string, password string, maxSize int) int {
 	var err error
 	client.wsConn, _, err = websocket.DefaultDialer.Dial(wsUrl, nil)
 	if err != nil {
-		return err
+		return 0
 	}
+	//init websrc
+	client.initWebRtc()
 	// 消息接收协程
 	go client.WsRecv(password, maxSize)
-	return nil
+	go client.startSendListen()
+	// 获取实际分配的端口
+	if client.listener != nil {
+		addr := client.listener.Addr().(*net.TCPAddr)
+		return addr.Port
+	}
+	return 0
 }
 
+func (client *CastXClient) Shutdown() {
+	client.run = false
+	if client.listener != nil {
+		client.listener.Close()
+	}
+	for key, _ := range client.videoConn {
+		delete(client.videoConn, key)
+	}
+	for key, _ := range client.audioConn {
+		delete(client.videoConn, key)
+	}
+	client.peerConnection.Close()
+	client.isAuth = false
+}
 func (client *CastXClient) login(password string, maxSize int) {
 	timestamp := time.Now().UnixMilli()
 	var srcData = client.securityKey + "|" + strconv.FormatInt(int64(timestamp), 10) + "|" + password
@@ -55,9 +83,7 @@ func (client *CastXClient) login(password string, maxSize int) {
 }
 func (client *CastXClient) WsRecv(password string, maxSize int) {
 	var msg comm.WSMessage
-	defer func() {
-		fmt.Printf("ws closed\r\n")
-	}()
+	defer client.wsConn.Close()
 	for {
 		err := client.wsConn.ReadJSON(&msg)
 		if err != nil {
@@ -70,7 +96,7 @@ func (client *CastXClient) WsRecv(password string, maxSize int) {
 			data := msg.Data.(map[string]interface{})
 			if data["auth"].(bool) {
 				client.isAuth = true
-				client.StartWebRtcReceive()
+				client.CreateOffer()
 			}
 		case comm.MsgTypeInitConfig:
 			data := msg.Data.(map[string]interface{})
@@ -90,29 +116,26 @@ func (client *CastXClient) WsRecv(password string, maxSize int) {
 	}
 }
 
-func (client *CastXClient) StartWebRtcReceive() error {
-	if runtime.GOOS == "android" {
-		anet.SetAndroidVersion(14)
-	}
-	depacketizer := NewH264Depacketizer()
-	// WebRTC配置
+func (client *CastXClient) initWebRtc() error {
 	config := webrtc.Configuration{}
+	depacketizer := NewH264Depacketizer(client)
+	var err error
 	// 创建PeerConnection
-	peerConnection, err := webrtc.NewPeerConnection(config)
+	client.peerConnection, err = webrtc.NewPeerConnection(config)
 	if err != nil {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 		return err
 	}
-	if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
+	if _, err = client.peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 		return err
 	}
-	if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
+	if _, err = client.peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 		return err
 	}
 	// 设置视频轨道处理
-	peerConnection.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+	client.peerConnection.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
 		fmt.Printf("接收到 %s 轨道\n", track.Kind())
 		// 创建内存缓冲区
 		fmt.Printf("开始接收轨道: %s\n", track.Codec().MimeType)
@@ -134,22 +157,24 @@ func (client *CastXClient) StartWebRtcReceive() error {
 			}()
 		}
 	})
-	gatherCompletePromise := webrtc.GatheringCompletePromise(peerConnection)
+	return nil
+}
+func (client *CastXClient) CreateOffer() error {
+	gatherCompletePromise := webrtc.GatheringCompletePromise(client.peerConnection)
 	// 创建Offer
-	offer, err := peerConnection.CreateOffer(nil)
+	offer, err := client.peerConnection.CreateOffer(nil)
 	if err != nil {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 		return err
 	}
 	fmt.Printf("StartWebRtcReceive4\r\n")
 	// 设置本地描述
-	if err = peerConnection.SetLocalDescription(offer); err != nil {
+	if err = client.peerConnection.SetLocalDescription(offer); err != nil {
 		return err
 	}
-	client.peerConnection = peerConnection
 	<-gatherCompletePromise
 	// 发送Offer到信令服务
-	client.getOffer(*peerConnection.LocalDescription())
+	client.getOffer(*client.peerConnection.LocalDescription())
 	return nil
 }
 
@@ -160,4 +185,44 @@ func (client *CastXClient) getOffer(offer webrtc.SessionDescription) {
 		Type: comm.MsgTypeOffer,
 		Data: string(offerJSON),
 	})
+}
+
+func (client *CastXClient) startSendListen() {
+	// 启动 TCP 服务器
+	var err error
+	client.listener, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	if err != nil {
+		panic(fmt.Sprintf("监听失败: %v", err))
+	}
+	client.run = true
+	// 主接收循环
+
+	for client.run {
+		conn, err := client.listener.Accept()
+		if err != nil {
+			fmt.Printf("接受连接失败: %v\n", err)
+			break
+		}
+		buf := make([]byte, 5)
+		conn.Read(buf)
+		if string(buf) == "video" {
+			client.videoConn[conn.RemoteAddr().String()] = conn
+		} else if string(buf) == "audio" {
+			client.audioConn[conn.RemoteAddr().String()] = conn
+		} else {
+			conn.Close()
+		}
+	}
+}
+
+func (client *CastXClient) sendVidee(data []byte, pts uint64, isKeyFrame bool) {
+	client.videomu.RLock()
+	defer client.videomu.RUnlock()
+	var err error
+	for key, conn := range client.videoConn {
+		err = writeFrameHeader(conn, data, pts, isKeyFrame)
+		if err != nil {
+			delete(client.videoConn, key)
+		}
+	}
 }

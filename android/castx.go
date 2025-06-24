@@ -4,9 +4,11 @@ package castX
 
 import (
 	"encoding/json"
+	"runtime"
 
 	"github.com/dosgo/castX/castxClient"
 	"github.com/dosgo/castX/castxServer"
+	"github.com/wlynxg/anet"
 
 	"github.com/dosgo/castX/scrcpy"
 	_ "golang.org/x/mobile/bind"
@@ -17,6 +19,9 @@ var castXClient *castxClient.CastXClient
 var scrcpyClient *scrcpy.ScrcpyClient
 
 func Start(webPort int, width int, height int, mimeType string, password string, receiverPort int) {
+	if runtime.GOOS == "android" {
+		anet.SetAndroidVersion(14)
+	}
 	castx, _ = castxServer.Start(webPort, width, height, mimeType, false, password, receiverPort)
 }
 
@@ -85,9 +90,18 @@ func RegJavaClass(c JavaCallbackInterface) {
 	})
 }
 
-func StartCastXClient(url string, password string, maxsize int) {
+func StartCastXClient(url string, password string, maxsize int) int {
+	if runtime.GOOS == "android" {
+		anet.SetAndroidVersion(14)
+	}
 	castXClient = &castxClient.CastXClient{}
-	castXClient.Start(url, password, maxsize)
+	return castXClient.Start(url, password, maxsize)
+}
+func ShutdownCastXClient() {
+	if castXClient != nil {
+		castXClient.Shutdown()
+		castXClient = nil
+	}
 }
 
 func SetSize(videoWidth int, videoHeight int, orientation int) {
@@ -95,6 +109,9 @@ func SetSize(videoWidth int, videoHeight int, orientation int) {
 }
 
 func StartScrcpyClient(webPort int, peerName string, savaPath string, password string) {
+	if runtime.GOOS == "android" {
+		anet.SetAndroidVersion(14)
+	}
 	scrcpyClient = scrcpy.NewScrcpyClient(webPort, peerName, savaPath, password)
 	scrcpyClient.StartClient()
 }

@@ -10,7 +10,6 @@ import (
 type SPSInfo struct {
 	Width              int     // 视频宽度（像素）
 	Height             int     // 视频高度（像素）
-	AspectRatio        string  // 宽高比
 	FrameRate          float64 // 估算帧率
 	Profile            uint8   // 新增: H.264 Profile
 	ConstraintSetFlags uint8
@@ -18,7 +17,7 @@ type SPSInfo struct {
 }
 
 // ParseSPS 精确解析SPS关键参数
-func ParseSPS(sps []byte) (SPSInfo, error) {
+func ParseSPS(sps []byte, readCroppingFlag bool) (SPSInfo, error) {
 	info := SPSInfo{Width: 0, Height: 0}
 
 	// 验证基本SPS格式
@@ -157,36 +156,27 @@ func ParseSPS(sps []byte) (SPSInfo, error) {
 	frameCroppingFlag, _ := bitReader.ReadUint8(1)
 
 	// 15. 如果frame_cropping_flag为1，读取裁剪参数
-	if frameCroppingFlag == 1 {
-		frameCropLeftOffset, _ := bitReader.ReadExpGolomb()
-		frameCropRightOffset, _ := bitReader.ReadExpGolomb()
-		frameCropTopOffset, _ := bitReader.ReadExpGolomb()
-		frameCropBottomOffset, _ := bitReader.ReadExpGolomb()
+	//是否需要准确的宽高,很耗性能
+	if readCroppingFlag {
+		if frameCroppingFlag == 1 {
+			frameCropLeftOffset, _ := bitReader.ReadExpGolomb()
+			frameCropRightOffset, _ := bitReader.ReadExpGolomb()
+			frameCropTopOffset, _ := bitReader.ReadExpGolomb()
+			frameCropBottomOffset, _ := bitReader.ReadExpGolomb()
 
-		// 应用裁剪参数（假设色度格式为4:2:0）
-		subWidthC := int(2)
-		subHeightC := int(2)
+			// 应用裁剪参数（假设色度格式为4:2:0）
+			subWidthC := int(2)
+			subHeightC := int(2)
 
-		// 计算裁剪后的尺寸
-		cropLeft := int(frameCropLeftOffset) * subWidthC
-		cropRight := int(frameCropRightOffset) * subWidthC
-		cropTop := int(frameCropTopOffset) * subHeightC
-		cropBottom := int(frameCropBottomOffset) * subHeightC
+			// 计算裁剪后的尺寸
+			cropLeft := int(frameCropLeftOffset) * subWidthC
+			cropRight := int(frameCropRightOffset) * subWidthC
+			cropTop := int(frameCropTopOffset) * subHeightC
+			cropBottom := int(frameCropBottomOffset) * subHeightC
 
-		info.Width -= cropLeft + cropRight
-		info.Height -= cropTop + cropBottom
-	}
-
-	// 14. 读取宽高比
-	aspectRatioIdc, _ := bitReader.ReadUint8(8)
-	if aspectRatioIdc == 255 {
-		// 自定义宽高比
-		sarWidth, _ := bitReader.ReadUint16(16)
-		sarHeight, _ := bitReader.ReadUint16(16)
-		info.AspectRatio = fmt.Sprintf("%d:%d", sarWidth, sarHeight)
-	} else {
-		// 标准宽高比
-		info.AspectRatio = aspectRatioToString(aspectRatioIdc)
+			info.Width -= cropLeft + cropRight
+			info.Height -= cropTop + cropBottom
+		}
 	}
 
 	// 15. 估算帧率
@@ -310,48 +300,6 @@ func skipScalingList(br *BitReader) {
 		} else {
 			lastScale = nextScale
 		}
-	}
-}
-
-// 将宽高比IDC转换为字符串
-func aspectRatioToString(idc uint8) string {
-	switch idc {
-	case 1:
-		return "1:1"
-	case 2:
-		return "12:11"
-	case 3:
-		return "10:11"
-	case 4:
-		return "16:11"
-	case 5:
-		return "40:33"
-	case 6:
-		return "24:11"
-	case 7:
-		return "20:11"
-	case 8:
-		return "32:11"
-	case 9:
-		return "80:33"
-	case 10:
-		return "18:11"
-	case 11:
-		return "15:11"
-	case 12:
-		return "64:33"
-	case 13:
-		return "160:99"
-	case 14:
-		return "4:3"
-	case 15:
-		return "3:2"
-	case 16:
-		return "2:1"
-	case 255:
-		return "custom"
-	default:
-		return "unknown"
 	}
 }
 

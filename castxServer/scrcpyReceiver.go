@@ -126,7 +126,7 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 			}
 			castx.WebrtcServer.SendVideo(h264Sps, int64(sendPts))
 			castx.WebrtcServer.SendVideo(h264Pps, int64(sendPts))
-			pspInfo, _ := comm.ParseSPS(data[4:])
+			pspInfo, _ := comm.ParseSPS(data[4:], true)
 			if pspInfo.Width != castx.Config.VideoWidth {
 				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, 0)
 			}

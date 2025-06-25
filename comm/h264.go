@@ -153,6 +153,30 @@ func ParseSPS(sps []byte) (SPSInfo, error) {
 	direct8x8Inference, _ := bitReader.ReadUint8(1)
 	_ = direct8x8Inference
 
+	// 14. 读取frame_cropping_flag (1位)
+	frameCroppingFlag, _ := bitReader.ReadUint8(1)
+
+	// 15. 如果frame_cropping_flag为1，读取裁剪参数
+	if frameCroppingFlag == 1 {
+		frameCropLeftOffset, _ := bitReader.ReadExpGolomb()
+		frameCropRightOffset, _ := bitReader.ReadExpGolomb()
+		frameCropTopOffset, _ := bitReader.ReadExpGolomb()
+		frameCropBottomOffset, _ := bitReader.ReadExpGolomb()
+
+		// 应用裁剪参数（假设色度格式为4:2:0）
+		subWidthC := int(2)
+		subHeightC := int(2)
+
+		// 计算裁剪后的尺寸
+		cropLeft := int(frameCropLeftOffset) * subWidthC
+		cropRight := int(frameCropRightOffset) * subWidthC
+		cropTop := int(frameCropTopOffset) * subHeightC
+		cropBottom := int(frameCropBottomOffset) * subHeightC
+
+		info.Width -= cropLeft + cropRight
+		info.Height -= cropTop + cropBottom
+	}
+
 	// 14. 读取宽高比
 	aspectRatioIdc, _ := bitReader.ReadUint8(8)
 	if aspectRatioIdc == 255 {

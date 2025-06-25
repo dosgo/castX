@@ -123,7 +123,11 @@ func ShutdownScrcpyClient() {
 	}
 }
 
-func ParseH264SPS(sps []byte, readCroppingFlag bool) string {
+func ParseH264SPS(sps []byte, _readCroppingFlag int) string {
+	readCroppingFlag := false
+	if _readCroppingFlag > 0 {
+		readCroppingFlag = true
+	}
 	info, err := comm.ParseSPS(sps, readCroppingFlag)
 	if err != nil {
 		return ""

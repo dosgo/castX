@@ -104,6 +104,7 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 	var h264Pps []byte
 	var lastPts uint64
 	var sendPts uint64
+	var spsChange = false
 	for {
 		err := readFrameHeader(conn, headerBuf, frameHeader)
 		if err != nil {
@@ -117,6 +118,12 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 		nalType := data[4] & 0x1F // 取低5位
 		if nalType == 7 {
 			spsPpsInfo := bytes.Split(data[:frameHeader.DataLength], startCode)
+			if h264Sps != nil {
+				if !bytes.Equal(h264Sps[4:], spsPpsInfo[1]) {
+					fmt.Printf("sps chagne \r\n")
+					spsChange = true
+				}
+			}
 			h264Sps = append(startCode, spsPpsInfo[1]...)
 			h264Pps = append(startCode, spsPpsInfo[2]...)
 
@@ -126,9 +133,12 @@ func (castx *Castx) handleVideo(_conn net.Conn) error {
 			}
 			castx.WebrtcServer.SendVideo(h264Sps, int64(sendPts))
 			castx.WebrtcServer.SendVideo(h264Pps, int64(sendPts))
-			pspInfo, _ := comm.ParseSPS(data[4:], true)
-			if pspInfo.Width != castx.Config.VideoWidth {
-				castx.UpdateConfig(pspInfo.Width, pspInfo.Height, 0)
+			if spsChange {
+				pspInfo, _ := comm.ParseSPS(data[4:], true)
+				if pspInfo.Width != castx.Config.VideoWidth {
+					castx.UpdateConfig(pspInfo.Width, pspInfo.Height, 0)
+				}
+				spsChange = false
 			}
 			continue
 		}

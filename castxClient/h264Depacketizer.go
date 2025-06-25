@@ -99,7 +99,7 @@ func (d *H264Depacketizer) processSTAPA(payload []byte, timestamp uint32) {
 
 func (d *H264Depacketizer) writeNALU(nalu []byte, timestamp int64) {
 	naluType := nalu[0] & 0x1F
-	startCode := []byte{0x00, 0x00, 0x00, 0x01}
+	//startCode := []byte{0x00, 0x00, 0x00, 0x01}
 	// 提取参数集
 	switch naluType {
 	case 7: // SPS
@@ -116,15 +116,15 @@ func (d *H264Depacketizer) writeNALU(nalu []byte, timestamp int64) {
 			isKeyFrame = true
 		}
 	}
-	//sps  pps
-	if naluType == 1 || naluType == 5 || naluType == 7 || naluType == 8 {
-		d.client.sendVideo(append(startCode, nalu...), uint64(timestamp), isKeyFrame)
-	}
+
+	d.client.sendVideo(nalu, uint64(timestamp), isKeyFrame)
+
 }
 
 func writeFrameHeader(conn net.Conn, data []byte, pts uint64, isKeyFrame bool) error {
 	var buffer = &bytes.Buffer{}
-	var PACKET_FLAG_KEY_FRAME uint64 = 1 << 62
+	var PACKET_FLAG_KEY_FRAME uint64 = uint64(1) << 62
+
 	var ptsAndFlags = pts
 	if isKeyFrame {
 		ptsAndFlags |= PACKET_FLAG_KEY_FRAME

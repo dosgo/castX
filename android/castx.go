@@ -8,6 +8,7 @@ import (
 
 	"github.com/dosgo/castX/castxClient"
 	"github.com/dosgo/castX/castxServer"
+	"github.com/dosgo/castX/comm"
 	"github.com/wlynxg/anet"
 
 	"github.com/dosgo/castX/scrcpy"
@@ -120,4 +121,16 @@ func ShutdownScrcpyClient() {
 		scrcpyClient.Shutdown()
 		scrcpyClient = nil
 	}
+}
+
+func ParseH264SPS(sps []byte) string {
+	info, err := comm.ParseSPS(sps)
+	if err != nil {
+		return ""
+	}
+	data, err := json.Marshal(info)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }

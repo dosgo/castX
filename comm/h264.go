@@ -8,10 +8,13 @@ import (
 
 // SPSInfo 视频参数结构体
 type SPSInfo struct {
-	Width       int     // 视频宽度（像素）
-	Height      int     // 视频高度（像素）
-	AspectRatio string  // 宽高比
-	FrameRate   float64 // 估算帧率
+	Width              int     // 视频宽度（像素）
+	Height             int     // 视频高度（像素）
+	AspectRatio        string  // 宽高比
+	FrameRate          float64 // 估算帧率
+	Profile            uint8   // 新增: H.264 Profile
+	ConstraintSetFlags uint8
+	Level              string // 新增: H.264 Level (字符串表示)
 }
 
 // ParseSPS 精确解析SPS关键参数
@@ -52,14 +55,15 @@ func ParseSPS(sps []byte) (SPSInfo, error) {
 
 	// 1. 读取profile_idc(8位)
 	profileIdc, _ := bitReader.ReadUint8(8)
-	_ = profileIdc // 可选使用
+	info.Profile = profileIdc // 可选使用
 
-	// 2. 跳过constraint_flags(8位)
-	bitReader.SkipBits(8)
+	// 2. constraint_flags(8位)
+	constraintFlags, _ := bitReader.ReadUint8(8)
+	info.ConstraintSetFlags = constraintFlags
 
 	// 3. 读取level_idc(8位)
-	_, _ = bitReader.ReadUint8(8)
-
+	levelIdc, _ := bitReader.ReadUint8(8)
+	info.Level = levelToString(levelIdc)
 	// 4. 解析seq_parameter_set_id (ue)
 	_, err = bitReader.ReadExpGolomb()
 	if err != nil {
@@ -348,4 +352,12 @@ func (info *SPSInfo) estimateFrameRate() {
 	default: // 8K+
 		info.FrameRate = 24.0
 	}
+}
+func levelToString(level uint8) string {
+	major := level / 10
+	minor := level % 10
+	if minor == 0 {
+		return fmt.Sprintf("%d", major)
+	}
+	return fmt.Sprintf("%d.%d", major, minor)
 }

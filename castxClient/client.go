@@ -92,7 +92,6 @@ func (client *CastXClient) WsRecv(password string, maxSize int) {
 			log.Println("read error:", err)
 			return
 		}
-		log.Printf("received: %s", msg)
 		switch msg.Type {
 		case comm.MsgTypeLoginAuthResp:
 			data := msg.Data.(map[string]interface{})
@@ -167,7 +166,7 @@ func (client *CastXClient) CreateOffer() error {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 		return err
 	}
-	fmt.Printf("StartWebRtcReceive4\r\n")
+
 	// 设置本地描述
 	if err = client.peerConnection.SetLocalDescription(offer); err != nil {
 		return err

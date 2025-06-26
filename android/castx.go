@@ -91,12 +91,12 @@ func RegJavaClass(c JavaCallbackInterface) {
 	})
 }
 
-func StartCastXClient(url string, password string, maxsize int) int {
+func StartCastXClient(url string, password string, maxsize int, useRtsp bool) int {
 	if runtime.GOOS == "android" {
 		anet.SetAndroidVersion(14)
 	}
 	castXClient = &castxClient.CastXClient{}
-	return castXClient.Start(url, password, maxsize)
+	return castXClient.Start(url, password, maxsize, useRtsp)
 }
 func ShutdownCastXClient() {
 	if castXClient != nil {

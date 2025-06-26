@@ -116,8 +116,8 @@ func (d *H264Depacketizer) writeNALU(nalu []byte, timestamp int64) {
 			isKeyFrame = true
 		}
 	}
-
-	d.client.sendVideo(nalu, uint64(timestamp), isKeyFrame)
+	fmt.Printf("isKeyFrame:%+v\r\n", isKeyFrame)
+	//d.client.sendVideo(nalu, uint64(timestamp), isKeyFrame)
 
 }
 

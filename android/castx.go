@@ -24,6 +24,27 @@ func Start(webPort int, width int, height int, mimeType string, password string,
 		anet.SetAndroidVersion(14)
 	}
 	castx, _ = castxServer.Start(webPort, width, height, mimeType, false, password, receiverPort)
+	castx.WsServer.SetControlFun(func(data map[string]interface{}) {
+		jsonStr, err := json.Marshal(data)
+		if err == nil {
+			javaObj.JavaCall.ControlCall(string(jsonStr))
+		}
+	})
+	castx.WebrtcServer.SetWebRtcConnectionStateChange(func(count int, state int) {
+		javaObj.JavaCall.WebRtcConnectionStateChange(count)
+	})
+	castx.WsServer.SetLoadInitFunc(func(data string) {
+		var dataInfo map[string]interface{}
+		err := json.Unmarshal([]byte(data), &dataInfo)
+		if err != nil {
+			return
+		}
+		if _, ok := dataInfo["maxSize"]; ok {
+			if _, ok1 := dataInfo["maxSize"].(float64); ok1 {
+				javaObj.JavaCall.SetMaxSize(int(dataInfo["maxSize"].(float64)))
+			}
+		}
+	})
 }
 
 func SendVideo(nal []byte, timestamp int64) {
@@ -55,6 +76,8 @@ type JavaCallbackInterface interface {
 	ControlCall(param string)
 	WebRtcConnectionStateChange(count int)
 	SetMaxSize(maxsize int)
+	LoginCall(data string)
+	OfferRespCall(data string)
 }
 
 var c JavaCallbackInterface
@@ -67,28 +90,6 @@ var javaObj *JavaClass
 
 func RegJavaClass(c JavaCallbackInterface) {
 	javaObj = &JavaClass{c}
-	castx.WsServer.SetControlFun(func(data map[string]interface{}) {
-		jsonStr, err := json.Marshal(data)
-		if err == nil {
-			javaObj.JavaCall.ControlCall(string(jsonStr))
-		}
-	})
-	castx.WebrtcServer.SetWebRtcConnectionStateChange(func(count int, state int) {
-		javaObj.JavaCall.WebRtcConnectionStateChange(count)
-	})
-	castx.WsServer.SetLoadInitFunc(func(data string) {
-		var dataInfo map[string]interface{}
-
-		err := json.Unmarshal([]byte(data), &dataInfo)
-		if err != nil {
-			return
-		}
-		if _, ok := dataInfo["maxSize"]; ok {
-			if _, ok1 := dataInfo["maxSize"].(float64); ok1 {
-				javaObj.JavaCall.SetMaxSize(int(dataInfo["maxSize"].(float64)))
-			}
-		}
-	})
 }
 
 func StartCastXClient(url string, password string, maxsize int, useRtsp bool) int {
@@ -96,8 +97,29 @@ func StartCastXClient(url string, password string, maxsize int, useRtsp bool) in
 		anet.SetAndroidVersion(14)
 	}
 	castXClient = &castxClient.CastXClient{}
+	if !useRtsp {
+		castXClient.SetLoginFun(func(dataInfo map[string]interface{}) {
+			jsonStr, err := json.Marshal(dataInfo)
+			if err == nil {
+				javaObj.JavaCall.LoginCall(string(jsonStr))
+			}
+		})
+		castXClient.SetOfferRespFun(func(dataInfo map[string]interface{}) {
+			jsonStr, err := json.Marshal(dataInfo)
+			if err == nil {
+				javaObj.JavaCall.OfferRespCall(string(jsonStr))
+			}
+		})
+	}
 	return castXClient.Start(url, password, maxsize, useRtsp)
 }
+
+func CastXClientSendOffer(offerJSON string) {
+	if castXClient != nil {
+		castXClient.SendOffer(offerJSON)
+	}
+}
+
 func ShutdownCastXClient() {
 	if castXClient != nil {
 		castXClient.Shutdown()

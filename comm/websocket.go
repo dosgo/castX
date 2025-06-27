@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -23,7 +24,7 @@ type WsServer struct {
 	connectionManager *ConnectionManager
 	webrtcServer      *WebrtcServer
 	config            *Config
-	auth              map[*websocket.Conn]bool
+	auth              sync.Map
 	tokens            *ttlMap
 }
 
@@ -56,7 +57,6 @@ func NewWs(config *Config, webrtcServer *WebrtcServer) *WsServer {
 	wsServer.connectionManager = &ConnectionManager{
 		connections: make(map[*websocket.Conn]bool),
 	}
-	wsServer.auth = make(map[*websocket.Conn]bool)
 	wsServer.tokens = NewTTLMap(20)
 	return wsServer
 }
@@ -121,11 +121,11 @@ func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		}
 		return
 	}
-	wsServer.auth[conn] = false
+	wsServer.auth.Store(conn, false)
 	wsServer.connectionManager.Add(conn)
 	defer func() {
 		conn.Close()
-		delete(wsServer.auth, conn)
+		wsServer.auth.Delete(conn)
 		wsServer.connectionManager.Remove(conn)
 	}()
 	wsServer.SendInitConfig(conn)
@@ -136,8 +136,11 @@ func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 			break
 		}
 		//如果没有登录并且数据不是登录数据跳过
-		if wsServer.auth[conn] == false && msg.Type != MsgTypeLoginAuth {
-			continue
+		if msg.Type != MsgTypeLoginAuth {
+			flag, ok := wsServer.auth.Load(conn)
+			if !ok || !flag.(bool) {
+				continue
+			}
 		}
 
 		switch msg.Type {
@@ -165,9 +168,11 @@ func (wsServer *WsServer) handleOffer(conn *websocket.Conn, data interface{}) {
 	if !ok {
 		return
 	}
+	fmt.Printf("handleOffer data:%+v\r\n", data)
 	webRtcSession, err := wsServer.webrtcServer.getSdp(strings.NewReader(dataStr))
 	//response, err := json.Marshal(webRtcSession)
 	if err != nil {
+		fmt.Printf("handleOffer err:%v\r\n", err)
 		return
 	}
 	conn.WriteJSON(WSMessage{
@@ -236,18 +241,20 @@ func (wsServer *WsServer) handleLogin(conn *websocket.Conn, data interface{}) {
 	var srcData = wsServer.config.SecurityKey + "|" + strconv.FormatInt(int64(timestamp), 10) + "|" + wsServer.config.Password
 	sum := sha256.Sum256([]byte(srcData))
 	token := hex.EncodeToString(sum[:])
+	var auth = false
 	//2秒内有效
 	if token == reqToken && math.Abs(timestamp-float64(time.Now().UnixMilli())) < 10*1000 {
-		wsServer.auth[conn] = true
+		wsServer.auth.Store(conn, true)
+		auth = true
 	}
 
 	conn.WriteJSON(WSMessage{
 		Type: MsgTypeLoginAuthResp,
 		Data: map[string]interface{}{
-			"auth": wsServer.auth[conn],
+			"auth": auth,
 		},
 	})
-	if wsServer.auth[conn] {
+	if auth {
 		//广播配置信息
 		wsServer.BroadcastInfo()
 	}

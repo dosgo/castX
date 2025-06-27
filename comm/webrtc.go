@@ -70,7 +70,9 @@ func (webrtcServer *WebrtcServer) SendWebrtc(data []byte, timestamp int64, durat
 // HTTP Handler that accepts an Offer and returns an Answer
 // adds outboundVideoTrack to PeerConnection
 func (webrtcServer *WebrtcServer) getSdp(r io.Reader) (*webrtc.SessionDescription, error) {
-	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
+		SDPSemantics: webrtc.SDPSemanticsUnifiedPlan,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +103,7 @@ func (webrtcServer *WebrtcServer) getSdp(r io.Reader) (*webrtc.SessionDescriptio
 		return nil, err
 	}
 	if err = peerConnection.SetRemoteDescription(offer); err != nil {
+		fmt.Printf("SetRemoteDescription errr\r\n")
 		return nil, err
 	}
 	gatherCompletePromise := webrtc.GatheringCompletePromise(peerConnection)

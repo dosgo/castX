@@ -1,7 +1,6 @@
 package castxClient
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -9,7 +8,6 @@ import (
 	"log"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/dosgo/castX/comm"
@@ -23,10 +21,8 @@ type CastXClient struct {
 	securityKey    string
 	listener       net.Listener
 	run            bool
-	videomu        sync.RWMutex
-	videoConn      map[string]net.Conn
-	audioConn      map[string]net.Conn
-	audiomu        sync.RWMutex
+	LoginCall      func(map[string]interface{}) //登录回调
+	OfferRespCall  func(map[string]interface{}) //offer回调
 	peerConnection *webrtc.PeerConnection
 }
 
@@ -36,34 +32,36 @@ func (client *CastXClient) Start(wsUrl string, password string, maxSize int, use
 	if err != nil {
 		return 0
 	}
-	client.audioConn = make(map[string]net.Conn)
-	client.videoConn = make(map[string]net.Conn)
 	//init websrc
 	if useRtsp {
 		client.initWebRtc()
 		client.startRtsp()
+		client.SetLoginFun(func(data map[string]interface{}) {
+			if data["auth"].(bool) {
+				client.isAuth = true
+				client.CreateOffer()
+			}
+		})
+		client.SetOfferRespFun(func(data map[string]interface{}) {
+			client.SetRemoteDescription(data)
+		})
 	}
 	// 消息接收协程
 	go client.WsRecv(password, maxSize)
-
-	// 获取实际分配的端口
-	if client.listener != nil {
-		addr := client.listener.Addr().(*net.TCPAddr)
-		return addr.Port
-	}
 	return 0
 }
 
+// 信令交互
+func (client *CastXClient) SendOffer(offerJSON string) {
+	client.wsConn.WriteJSON(comm.WSMessage{
+		Type: comm.MsgTypeOffer,
+		Data: offerJSON,
+	})
+}
 func (client *CastXClient) Shutdown() {
 	client.run = false
 	if client.listener != nil {
 		client.listener.Close()
-	}
-	for key, _ := range client.videoConn {
-		delete(client.videoConn, key)
-	}
-	for key, _ := range client.audioConn {
-		delete(client.videoConn, key)
 	}
 	client.peerConnection.Close()
 	client.isAuth = false
@@ -102,20 +100,21 @@ func (client *CastXClient) WsRecv(password string, maxSize int) {
 			client.login(password, maxSize)
 		case comm.MsgTypeLoginAuthResp:
 			data := msg.Data.(map[string]interface{})
-			if data["auth"].(bool) {
-				client.isAuth = true
-				client.CreateOffer()
+			if client.LoginCall != nil {
+				client.LoginCall(data)
 			}
 		case comm.MsgTypeOfferResp:
 			data := msg.Data.(map[string]interface{})
-			answerStr, _ := json.Marshal(data["sdp"])
-			var answer webrtc.SessionDescription
-			json.NewDecoder(bytes.NewBuffer([]byte(answerStr))).Decode(&answer)
-			// 设置远程描述
-			if err = client.peerConnection.SetRemoteDescription(answer); err != nil {
-				fmt.Printf("StartWebRtcReceive err:%+v\n", err)
+			if client.OfferRespCall != nil {
+				client.OfferRespCall(data)
 			}
 		}
-
 	}
+}
+func (client *CastXClient) SetLoginFun(_loginCall func(map[string]interface{})) {
+	client.LoginCall = _loginCall
+}
+
+func (client *CastXClient) SetOfferRespFun(_offerRespCall func(map[string]interface{})) {
+	client.OfferRespCall = _offerRespCall
 }

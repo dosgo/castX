@@ -57,13 +57,13 @@ func ffmpegDesktop(audio bool, webrtcServer *comm.WebrtcServer) {
 			ffmpeg.KwArgs{
 				"crf":         "28",
 				"map":         "0:v",
-				"preset":      "ultrafast",     // 最快编码
-				"tune":        "zerolatency",   // 零延迟模式
-				"x264-params": "no-scenecut=1", // 零延迟模式
-				//"profile:v": "baseline",                 // 基线档次
-				"pix_fmt":  "yuv420p",                  // 像素格式
-				"f":        "h264",                     // 原始H264输出
-				"movflags": "frag_keyframe+empty_moov", // 流式优化
+				"preset":      "ultrafast",                // 最快编码
+				"tune":        "zerolatency",              // 零延迟模式
+				"x264-params": "no-scenecut=1",            // 零延迟模式
+				"profile:v":   "baseline",                 // 基线档次
+				"pix_fmt":     "yuv420p",                  // 像素格式
+				"f":           "h264",                     // 原始H264输出
+				"movflags":    "frag_keyframe+empty_moov", // 流式优化
 			})
 	stream = append(stream, videoOutput)
 	ioW = append(ioW, h264Buf)

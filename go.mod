@@ -3,11 +3,12 @@ module github.com/dosgo/castX
 go 1.24.0
 
 require (
+	github.com/bluenviron/gortsplib/v4 v4.14.1
 	github.com/dosgo/libadb v1.3.3
 	github.com/go-vgo/robotgo v0.110.7
 	github.com/gorilla/websocket v1.5.3
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
-	github.com/pion/rtp v1.8.7
+	github.com/pion/rtp v1.8.16
 	github.com/pion/webrtc/v3 v3.3.5
 	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/wlynxg/anet v0.0.3
@@ -16,6 +17,7 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go v1.38.20 // indirect
+	github.com/bluenviron/mediacommon/v2 v2.2.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dblohm7/wingoes v0.0.0-20240820181039-f2b84150679e // indirect

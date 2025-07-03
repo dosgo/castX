@@ -35,13 +35,9 @@ func (client *CastXClient) Start(wsUrl string, password string, maxSize int, use
 	}
 	//init websrc
 	if useRtsp {
+		client.initWebRtc()
 		client.rtsp = &serverHandler{}
-		go client.rtsp.Start()
-		time.Sleep(time.Millisecond * 5000)
-
-		fmt.Printf("client.rtsp.stream:%+v\r\n", client.rtsp.stream.Description().Medias[0])
-		client.initWebRtc(client.rtsp.stream)
-
+		go client.rtsp.Start(client.peerConnection)
 		client.SetLoginFun(func(data map[string]interface{}) {
 			if data["auth"].(bool) {
 				client.isAuth = true

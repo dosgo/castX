@@ -2,13 +2,17 @@
 package castxClient
 
 import (
+	"encoding/binary"
+	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/bluenviron/gortsplib/v4"
 	"github.com/bluenviron/gortsplib/v4/pkg/base"
 	"github.com/bluenviron/gortsplib/v4/pkg/description"
 	"github.com/bluenviron/gortsplib/v4/pkg/format"
+	"github.com/pion/webrtc/v3"
 )
 
 // This example shows how to
@@ -17,9 +21,10 @@ import (
 // 3. serve the content of the file to all connected readers.
 
 type serverHandler struct {
-	server *gortsplib.Server
-	stream *gortsplib.ServerStream
-	mutex  sync.RWMutex
+	server      *gortsplib.Server
+	stream      *gortsplib.ServerStream
+	mutex       sync.RWMutex
+	tracksReady chan struct{}
 }
 
 // called when a connection is opened.
@@ -79,8 +84,35 @@ func (sh *serverHandler) OnPlay(_ *gortsplib.ServerHandlerOnPlayCtx) (*base.Resp
 	}, nil
 }
 
-func (h *serverHandler) Start() {
+func (sh *serverHandler) createRTSPStream(videoPayloadTyp uint8, audioPayloadTyp uint8, sps []byte, pps []byte) {
+	if sh.stream == nil && videoPayloadTyp > 0 {
+		desc := &description.Session{
+			Medias: []*description.Media{{
+				Type: description.MediaTypeVideo,
+				Formats: []format.Format{&format.H264{
+					PayloadTyp:        videoPayloadTyp,
+					SPS:               sps, // 您的SPS
+					PPS:               pps, // 您的PPS
+					PacketizationMode: 1,
+				}},
+			}, {
+				Type: description.MediaTypeAudio,
+				Formats: []format.Format{&format.Opus{
+					PayloadTyp: audioPayloadTyp,
 
+					ChannelCount: 2,
+				}},
+			}},
+		}
+		// create a server stream
+		sh.stream = gortsplib.NewServerStream(
+			sh.server,
+			desc,
+		)
+	}
+}
+func (h *serverHandler) Start(peerConnection *webrtc.PeerConnection) {
+	h.tracksReady = make(chan struct{})
 	// prevent clients from connecting to the server until the stream is properly set up
 	h.mutex.Lock()
 
@@ -102,28 +134,74 @@ func (h *serverHandler) Start() {
 	}
 	defer h.server.Close()
 
-	// create a RTSP description that contains a H264 format
-	desc := &description.Session{
-		Medias: []*description.Media{{
-			Type: description.MediaTypeVideo,
-			Formats: []format.Format{&format.H264{
-				PayloadTyp:        102,
-				PacketizationMode: 1,
-			}},
-		}},
+	var videoPayloadTyp = uint8(0)
+	var audioPayloadTyp = uint8(0)
+	var sps = []byte{}
+	var pps = []byte{}
+	peerConnection.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+
+		fmt.Printf("接收到 %s 轨道\n", track.Kind())
+		// 创建内存缓冲区
+		fmt.Printf("开始接收轨道: %s\n", track.Codec().MimeType)
+		if track.Codec().MimeType == "video/H264" {
+			videoPayloadTyp = uint8(track.Codec().PayloadType)
+			go func() {
+				for {
+					rtpPacket, _, err := track.ReadRTP()
+
+					if err != nil {
+						break
+					}
+
+					naluType := rtpPacket.Payload[0] & 0x1F
+					if naluType == 7 || naluType == 8 {
+						fmt.Printf("naluType:%d\r\n", naluType)
+					}
+					if naluType == 24 {
+						nalSize := binary.BigEndian.Uint16(rtpPacket.Payload[1:])
+						subNalType := rtpPacket.Payload[3] & 0x1F
+						if subNalType == 7 {
+							sps = append([]byte{}, rtpPacket.Payload[3:nalSize]...)
+							pps = append([]byte{}, rtpPacket.Payload[3+nalSize+2:]...)
+
+							fmt.Printf("sps:%+v\r\n", sps)
+							fmt.Printf("pps:%+v\r\n", pps)
+						}
+					}
+
+					if h.stream != nil {
+						h.stream.WritePacketRTP(h.stream.Description().Medias[0], rtpPacket)
+					}
+				}
+			}()
+		}
+		if track.Codec().MimeType == "audio/opus" {
+			fmt.Printf("audio\r\n")
+			audioPayloadTyp = uint8(track.Codec().PayloadType)
+			go func() {
+				for {
+					rtpPacket, _, err := track.ReadRTP()
+					if err != nil {
+						break
+					}
+					if h.stream != nil {
+						h.stream.WritePacketRTP(h.stream.Description().Medias[1], rtpPacket)
+					}
+				}
+			}()
+		}
+		if videoPayloadTyp != 0 && audioPayloadTyp != 0 && sps != nil {
+			h.createRTSPStream(videoPayloadTyp, audioPayloadTyp, sps, pps)
+			close(h.tracksReady)
+		}
+	})
+
+	select {
+	case <-h.tracksReady:
+		break
+	case <-time.After(20 + time.Second):
+		h.createRTSPStream(videoPayloadTyp, audioPayloadTyp, sps, pps)
 	}
-
-	// create a server stream
-	h.stream = gortsplib.NewServerStream(
-		h.server,
-		desc,
-	)
-
-	//err = h.stream.Initialize()
-	//if err != nil {
-	//	panic(err)
-	//	}
-	defer h.stream.Close()
 
 	// allow clients to connect
 	h.mutex.Unlock()

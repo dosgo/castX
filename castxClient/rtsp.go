@@ -1,3 +1,4 @@
+// Package main contains an example.
 package castxClient
 
 import (
@@ -8,14 +9,17 @@ import (
 	"github.com/bluenviron/gortsplib/v4/pkg/base"
 	"github.com/bluenviron/gortsplib/v4/pkg/description"
 	"github.com/bluenviron/gortsplib/v4/pkg/format"
-	"github.com/pion/rtp"
 )
 
+// This example shows how to
+// 1. create a RTSP server which accepts plain connections.
+// 2. read from disk a MPEG-TS file which contains a H264 track.
+// 3. serve the content of the file to all connected readers.
+
 type serverHandler struct {
-	server    *gortsplib.Server
-	mutex     sync.RWMutex
-	stream    *gortsplib.ServerStream
-	publisher *gortsplib.ServerSession
+	server *gortsplib.Server
+	stream *gortsplib.ServerStream
+	mutex  sync.RWMutex
 }
 
 // called when a connection is opened.
@@ -34,18 +38,8 @@ func (sh *serverHandler) OnSessionOpen(_ *gortsplib.ServerHandlerOnSessionOpenCt
 }
 
 // called when a session is closed.
-func (sh *serverHandler) OnSessionClose(ctx *gortsplib.ServerHandlerOnSessionCloseCtx) {
+func (sh *serverHandler) OnSessionClose(_ *gortsplib.ServerHandlerOnSessionCloseCtx) {
 	log.Printf("session closed")
-
-	sh.mutex.Lock()
-	defer sh.mutex.Unlock()
-
-	// if the session is the publisher,
-	// close the stream and disconnect any reader.
-	if sh.stream != nil && ctx.Session == sh.publisher {
-		sh.stream.Close()
-		sh.stream = nil
-	}
 }
 
 // called when receiving a DESCRIBE request.
@@ -57,70 +51,19 @@ func (sh *serverHandler) OnDescribe(
 	sh.mutex.RLock()
 	defer sh.mutex.RUnlock()
 
-	// no one is publishing yet
-	if sh.stream == nil {
-		return &base.Response{
-			StatusCode: base.StatusNotFound,
-		}, nil, nil
-	}
-
-	// send medias that are being published to the client
 	return &base.Response{
 		StatusCode: base.StatusOK,
 	}, sh.stream, nil
 }
 
-// called when receiving an ANNOUNCE request.
-func (sh *serverHandler) OnAnnounce(ctx *gortsplib.ServerHandlerOnAnnounceCtx) (*base.Response, error) {
-	log.Printf("ANNOUNCE request")
-
-	sh.mutex.Lock()
-	defer sh.mutex.Unlock()
-
-	// disconnect existing publisher
-	if sh.stream != nil {
-		sh.stream.Close()
-		sh.publisher.Close()
-	}
-
-	// create the stream and save the publisher
-	sh.stream = &gortsplib.ServerStream{
-		Server: sh.server,
-		Desc:   ctx.Description,
-	}
-	err := sh.stream.Initialize()
-	if err != nil {
-		panic(err)
-	}
-	sh.publisher = ctx.Session
-
-	return &base.Response{
-		StatusCode: base.StatusOK,
-	}, nil
-}
-
 // called when receiving a SETUP request.
-func (sh *serverHandler) OnSetup(ctx *gortsplib.ServerHandlerOnSetupCtx) (
-	*base.Response, *gortsplib.ServerStream, error,
-) {
+func (sh *serverHandler) OnSetup(
+	_ *gortsplib.ServerHandlerOnSetupCtx,
+) (*base.Response, *gortsplib.ServerStream, error) {
 	log.Printf("SETUP request")
-
-	// SETUP is used by both readers and publishers. In case of publishers, just return StatusOK.
-	if ctx.Session.State() == gortsplib.ServerSessionStatePreRecord {
-		return &base.Response{
-			StatusCode: base.StatusOK,
-		}, nil, nil
-	}
 
 	sh.mutex.RLock()
 	defer sh.mutex.RUnlock()
-
-	// no one is publishing yet
-	if sh.stream == nil {
-		return &base.Response{
-			StatusCode: base.StatusNotFound,
-		}, nil, nil
-	}
 
 	return &base.Response{
 		StatusCode: base.StatusOK,
@@ -136,24 +79,12 @@ func (sh *serverHandler) OnPlay(_ *gortsplib.ServerHandlerOnPlayCtx) (*base.Resp
 	}, nil
 }
 
-// called when receiving a RECORD request.
-func (sh *serverHandler) OnRecord(ctx *gortsplib.ServerHandlerOnRecordCtx) (*base.Response, error) {
-	log.Printf("RECORD request")
+func (h *serverHandler) Start() {
 
-	// called when receiving a RTP packet
-	ctx.Session.OnPacketRTPAny(func(medi *description.Media, _ format.Format, pkt *rtp.Packet) {
-		// route the RTP packet to all readers
-		sh.stream.WritePacketRTP(medi, pkt) //nolint:errcheck
-	})
+	// prevent clients from connecting to the server until the stream is properly set up
+	h.mutex.Lock()
 
-	return &base.Response{
-		StatusCode: base.StatusOK,
-	}, nil
-}
-
-func (client *CastXClient) startRtsp() {
-	// configure the server
-	h := &serverHandler{}
+	// create the server
 	h.server = &gortsplib.Server{
 		Handler:           h,
 		RTSPAddress:       ":8554",
@@ -164,7 +95,40 @@ func (client *CastXClient) startRtsp() {
 		MulticastRTCPPort: 8003,
 	}
 
-	// start server and wait until a fatal error
+	// start the server
+	err := h.server.Start()
+	if err != nil {
+		panic(err)
+	}
+	defer h.server.Close()
+
+	// create a RTSP description that contains a H264 format
+	desc := &description.Session{
+		Medias: []*description.Media{{
+			Type: description.MediaTypeVideo,
+			Formats: []format.Format{&format.H264{
+				PayloadTyp:        102,
+				PacketizationMode: 1,
+			}},
+		}},
+	}
+
+	// create a server stream
+	h.stream = gortsplib.NewServerStream(
+		h.server,
+		desc,
+	)
+
+	//err = h.stream.Initialize()
+	//if err != nil {
+	//	panic(err)
+	//	}
+	defer h.stream.Close()
+
+	// allow clients to connect
+	h.mutex.Unlock()
+
+	// wait until a fatal error
 	log.Printf("server is ready on %s", h.server.RTSPAddress)
-	panic(h.server.StartAndWait())
+	panic(h.server.Wait())
 }

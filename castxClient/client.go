@@ -23,6 +23,7 @@ type CastXClient struct {
 	run            bool
 	LoginCall      func(map[string]interface{}) //登录回调
 	OfferRespCall  func(map[string]interface{}) //offer回调
+	rtsp           *serverHandler
 	peerConnection *webrtc.PeerConnection
 }
 
@@ -34,8 +35,13 @@ func (client *CastXClient) Start(wsUrl string, password string, maxSize int, use
 	}
 	//init websrc
 	if useRtsp {
-		client.initWebRtc()
-		client.startRtsp()
+		client.rtsp = &serverHandler{}
+		go client.rtsp.Start()
+		time.Sleep(time.Millisecond * 5000)
+
+		fmt.Printf("client.rtsp.stream:%+v\r\n", client.rtsp.stream.Description().Medias[0])
+		client.initWebRtc(client.rtsp.stream)
+
 		client.SetLoginFun(func(data map[string]interface{}) {
 			if data["auth"].(bool) {
 				client.isAuth = true
@@ -77,7 +83,7 @@ func (client *CastXClient) login(password string, maxSize int) {
 		"timestamp": timestamp,
 	}
 	argsStr, _ := json.Marshal(args)
-	fmt.Print("asksStr:")
+	fmt.Printf("argsStr:%s\r\n", string(argsStr))
 	//登录
 	client.wsConn.WriteJSON(comm.WSMessage{
 		Type: comm.MsgTypeLoginAuth,

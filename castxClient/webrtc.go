@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/bluenviron/gortsplib/v4"
 	"github.com/pion/webrtc/v3"
 )
 
-func (client *CastXClient) initWebRtc() error {
+func (client *CastXClient) initWebRtc(stream *gortsplib.ServerStream) error {
 	config := webrtc.Configuration{}
-	depacketizer := NewH264Depacketizer(client)
+	//	depacketizer := NewH264Depacketizer(client)
 	var err error
 	// 创建PeerConnection
 	client.peerConnection, err = webrtc.NewPeerConnection(config)
@@ -27,6 +28,7 @@ func (client *CastXClient) initWebRtc() error {
 		return err
 	}
 	// 设置视频轨道处理
+
 	client.peerConnection.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
 		fmt.Printf("接收到 %s 轨道\n", track.Kind())
 		// 创建内存缓冲区
@@ -38,8 +40,8 @@ func (client *CastXClient) initWebRtc() error {
 					if err != nil {
 						break
 					}
-					//comm.ProcessNalUnit(rtpPacket.Payload)
-					depacketizer.ProcessRTP(rtpPacket)
+
+					stream.WritePacketRTP(stream.Description().Medias[0], rtpPacket)
 				}
 			}()
 		}

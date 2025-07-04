@@ -1,6 +1,6 @@
 package castX
 
-// android build   gomobile bind -androidapi 21 -target=android -ldflags "-checklinkname=0 -s -w"
+// android build   gomobile bind -androidapi=21 -target=android -ldflags "-checklinkname=0 -s -w"
 
 import (
 	"encoding/json"
@@ -44,17 +44,6 @@ func Start(webPort int, width int, height int, mimeType string, password string,
 			}
 		}
 	})
-}
-
-func SendVideo(nal []byte, timestamp int64) {
-	if castx != nil {
-		castx.WebrtcServer.SendVideo(nal, timestamp)
-	}
-}
-func SendAudio(nal []byte, timestamp int64) {
-	if castx != nil {
-		castx.WebrtcServer.SendAudio(nal, timestamp)
-	}
 }
 
 func Shutdown() {

@@ -26,7 +26,7 @@ func (webrtcServer *WebrtcServer) SetWebRtcConnectionStateChange(_webRtcConnecti
 	webrtcServer.webRtcConnectionStateChange = _webRtcConnectionStateChange
 }
 
-func (webrtcServer *WebrtcServer) SendVideo(nal []byte, timestamp int64) {
+func (webrtcServer *WebrtcServer) SendVideo(nal []byte, timestamp int64) error {
 	var duration time.Duration = 0
 	if webrtcServer.lastVideoTimestamp == 0 {
 		duration = time.Second / 40
@@ -34,9 +34,15 @@ func (webrtcServer *WebrtcServer) SendVideo(nal []byte, timestamp int64) {
 		duration = time.Duration(timestamp-webrtcServer.lastVideoTimestamp) * time.Microsecond
 	}
 	webrtcServer.lastVideoTimestamp = timestamp
-	webrtcServer.SendWebrtc(nal, timestamp, duration, false)
+	nal = addStartCodeIfNeeded(nal)
+	return webrtcServer.outboundVideoTrack.WriteSample(media.Sample{
+		Data:      nal,
+		Duration:  duration,
+		Timestamp: time.UnixMicro(timestamp),
+	})
+
 }
-func (webrtcServer *WebrtcServer) SendAudio(nal []byte, timestamp int64) {
+func (webrtcServer *WebrtcServer) SendAudio(nal []byte, timestamp int64) error {
 	var duration time.Duration = 0
 	if webrtcServer.lastAudioTimestamp == 0 {
 		duration = time.Second / 40
@@ -44,13 +50,12 @@ func (webrtcServer *WebrtcServer) SendAudio(nal []byte, timestamp int64) {
 		duration = time.Duration(timestamp-webrtcServer.lastAudioTimestamp) * time.Microsecond
 	}
 	webrtcServer.lastAudioTimestamp = timestamp
-	webrtcServer.SendWebrtc(nal, timestamp, duration, true)
-}
-func hasStartCode(data []byte, startCode []byte) bool {
-	if len(data) < len(startCode) {
-		return false
-	}
-	return bytes.Equal(data[:len(startCode)], startCode)
+
+	return webrtcServer.outboundAudioTrack.WriteSample(media.Sample{
+		Data:      nal,
+		Duration:  duration,
+		Timestamp: time.UnixMicro(timestamp),
+	})
 }
 
 // 智能添加起始码
@@ -59,32 +64,11 @@ func addStartCodeIfNeeded(data []byte) []byte {
 	startCode3 := []byte{0x00, 0x00, 0x01}
 	startCode4 := []byte{0x00, 0x00, 0x00, 0x01}
 	// 检查是否已有起始码
-	if hasStartCode(data, startCode4) || hasStartCode(data, startCode3) {
+	if bytes.Equal(data[:len(startCode4)], startCode4) || bytes.Equal(data[:len(startCode3)], startCode3) {
 		return data // 已有起始码，直接返回
 	}
 	// 添加4字节起始码
 	return append(startCode4, data...)
-}
-func (webrtcServer *WebrtcServer) SendWebrtc(data []byte, timestamp int64, duration time.Duration, audio bool) error {
-	var err error
-	if audio {
-		err = webrtcServer.outboundAudioTrack.WriteSample(media.Sample{
-			Data:      data,
-			Duration:  duration,
-			Timestamp: time.UnixMicro(timestamp),
-		})
-	} else {
-		data = addStartCodeIfNeeded(data)
-		err = webrtcServer.outboundVideoTrack.WriteSample(media.Sample{
-			Data:      data,
-			Duration:  duration,
-			Timestamp: time.UnixMicro(timestamp),
-		})
-		if err != nil {
-			fmt.Printf("发送帧失败: %v\r\n", err)
-		}
-	}
-	return err
 }
 
 // HTTP Handler that accepts an Offer and returns an Answer

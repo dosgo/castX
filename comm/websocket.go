@@ -168,7 +168,7 @@ func (wsServer *WsServer) handleOffer(conn *websocket.Conn, data interface{}) {
 	if !ok {
 		return
 	}
-	fmt.Printf("handleOffer data:%+v\r\n", data)
+	//fmt.Printf("handleOffer data:%+v\r\n", data)
 	webRtcSession, err := wsServer.webrtcServer.getSdp(strings.NewReader(dataStr))
 	//response, err := json.Marshal(webRtcSession)
 	if err != nil {

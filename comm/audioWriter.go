@@ -30,7 +30,7 @@ func (a *AudioWriter) Write(p []byte) (n int, err error) {
 	frameSize := 960 * 2 * 2 // 960采样 * 2声道 * 2字节(16bit)
 	for len(a.buffer) >= frameSize {
 		audioFrame := a.buffer[:frameSize]
-		if err := a.webrtcServer.SendWebrtc(audioFrame, time.Now().Local().UnixMicro(), time.Millisecond*20, true); err != nil {
+		if err := a.webrtcServer.SendAudio(audioFrame, time.Now().Local().UnixMicro()); err != nil {
 			fmt.Printf("AudioWriter SendWebrtc error:%v\r\n", err)
 			return 0, err
 		}

@@ -69,7 +69,7 @@ func (m *MemoryWriter) toWebrtc() {
 	for m.run {
 		nal := m.processBuffer()
 		if len(nal) > 0 {
-			m.webrtcServer.SendWebrtc(nal, time.Now().Local().UnixMicro(), time.Second/time.Duration(m.framerate), false)
+			m.webrtcServer.SendVideo(nal, time.Now().Local().UnixMicro())
 		} else {
 			time.Sleep(time.Millisecond * 1)
 		}

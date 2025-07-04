@@ -12,7 +12,7 @@ import (
 	"github.com/bluenviron/gortsplib/v4/pkg/base"
 	"github.com/bluenviron/gortsplib/v4/pkg/description"
 	"github.com/bluenviron/gortsplib/v4/pkg/format"
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4"
 )
 
 // This example shows how to
@@ -155,7 +155,7 @@ func (h *serverHandler) Start(peerConnection *webrtc.PeerConnection) {
 
 					naluType := rtpPacket.Payload[0] & 0x1F
 					if naluType == 7 || naluType == 8 {
-						fmt.Printf("naluType:%d\r\n", naluType)
+						fmt.Printf("pps naluType:%d\r\n", naluType)
 					}
 					if naluType == 24 {
 						nalSize := binary.BigEndian.Uint16(rtpPacket.Payload[1:])
@@ -174,7 +174,6 @@ func (h *serverHandler) Start(peerConnection *webrtc.PeerConnection) {
 
 						}
 					}
-
 					if h.stream != nil {
 						//fmt.Printf("rtpPacket.Timestamp:%d\r\n", rtpPacket.Timestamp)
 						//fmt.Printf("rtpPacket.SequenceNumber:%d\r\n", rtpPacket.Header.SequenceNumber)

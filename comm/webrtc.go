@@ -1,6 +1,7 @@
 package comm
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -8,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pion/webrtc/v3"
-	"github.com/pion/webrtc/v3/pkg/media"
+	"github.com/pion/webrtc/v4"
+	"github.com/pion/webrtc/v4/pkg/media"
 )
 
 type WebrtcServer struct {
@@ -45,7 +46,25 @@ func (webrtcServer *WebrtcServer) SendAudio(nal []byte, timestamp int64) {
 	webrtcServer.lastAudioTimestamp = timestamp
 	webrtcServer.SendWebrtc(nal, timestamp, duration, true)
 }
+func hasStartCode(data []byte, startCode []byte) bool {
+	if len(data) < len(startCode) {
+		return false
+	}
+	return bytes.Equal(data[:len(startCode)], startCode)
+}
 
+// 智能添加起始码
+func addStartCodeIfNeeded(data []byte) []byte {
+	// 定义可能的起始码
+	startCode3 := []byte{0x00, 0x00, 0x01}
+	startCode4 := []byte{0x00, 0x00, 0x00, 0x01}
+	// 检查是否已有起始码
+	if hasStartCode(data, startCode4) || hasStartCode(data, startCode3) {
+		return data // 已有起始码，直接返回
+	}
+	// 添加4字节起始码
+	return append(startCode4, data...)
+}
 func (webrtcServer *WebrtcServer) SendWebrtc(data []byte, timestamp int64, duration time.Duration, audio bool) error {
 	var err error
 	if audio {
@@ -55,6 +74,7 @@ func (webrtcServer *WebrtcServer) SendWebrtc(data []byte, timestamp int64, durat
 			Timestamp: time.UnixMicro(timestamp),
 		})
 	} else {
+		data = addStartCodeIfNeeded(data)
 		err = webrtcServer.outboundVideoTrack.WriteSample(media.Sample{
 			Data:      data,
 			Duration:  duration,
@@ -90,9 +110,11 @@ func (webrtcServer *WebrtcServer) getSdp(r io.Reader) (*webrtc.SessionDescriptio
 		}
 	})
 	//添加视频
-	if _, err = peerConnection.AddTrack(webrtcServer.outboundVideoTrack); err != nil {
+	_, err = peerConnection.AddTrack(webrtcServer.outboundVideoTrack)
+	if err != nil {
 		return nil, err
 	}
+
 	//添加音频
 	if _, err = peerConnection.AddTrack(webrtcServer.outboundAudioTrack); err != nil {
 		return nil, err

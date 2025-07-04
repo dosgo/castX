@@ -12,7 +12,7 @@ import (
 
 	"github.com/dosgo/castX/comm"
 	"github.com/gorilla/websocket"
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4"
 )
 
 type CastXClient struct {

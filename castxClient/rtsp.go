@@ -161,15 +161,23 @@ func (h *serverHandler) Start(peerConnection *webrtc.PeerConnection) {
 						nalSize := binary.BigEndian.Uint16(rtpPacket.Payload[1:])
 						subNalType := rtpPacket.Payload[3] & 0x1F
 						if subNalType == 7 {
-							sps = append([]byte{}, rtpPacket.Payload[3:nalSize]...)
+							sps = append([]byte{}, rtpPacket.Payload[3:nalSize+3]...)
 							pps = append([]byte{}, rtpPacket.Payload[3+nalSize+2:]...)
 
 							fmt.Printf("sps:%+v\r\n", sps)
 							fmt.Printf("pps:%+v\r\n", pps)
+							if h.tracksReady != nil {
+								close(h.tracksReady)
+								h.tracksReady = nil
+							}
+							//continue
+
 						}
 					}
 
 					if h.stream != nil {
+						//fmt.Printf("rtpPacket.Timestamp:%d\r\n", rtpPacket.Timestamp)
+						//fmt.Printf("rtpPacket.SequenceNumber:%d\r\n", rtpPacket.Header.SequenceNumber)
 						h.stream.WritePacketRTP(h.stream.Description().Medias[0], rtpPacket)
 					}
 				}
@@ -190,19 +198,15 @@ func (h *serverHandler) Start(peerConnection *webrtc.PeerConnection) {
 				}
 			}()
 		}
-		if videoPayloadTyp != 0 && audioPayloadTyp != 0 && sps != nil {
-			h.createRTSPStream(videoPayloadTyp, audioPayloadTyp, sps, pps)
-			close(h.tracksReady)
-		}
 	})
 
 	select {
 	case <-h.tracksReady:
-		break
-	case <-time.After(20 + time.Second):
+		h.createRTSPStream(videoPayloadTyp, audioPayloadTyp, sps, pps)
+	case <-time.After(20 * time.Second):
 		h.createRTSPStream(videoPayloadTyp, audioPayloadTyp, sps, pps)
 	}
-
+	h.tracksReady = nil
 	// allow clients to connect
 	h.mutex.Unlock()
 

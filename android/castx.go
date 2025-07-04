@@ -6,9 +6,8 @@ import (
 	"encoding/json"
 	"runtime"
 
-	"github.com/dosgo/castX/castxClient"
 	"github.com/dosgo/castX/castxServer"
-	"github.com/dosgo/castX/comm"
+	"github.com/dosgo/castX/wsClient"
 	"github.com/wlynxg/anet"
 
 	"github.com/dosgo/castX/scrcpy"
@@ -16,7 +15,7 @@ import (
 )
 
 var castx *castxServer.Castx
-var castXClient *castxClient.CastXClient
+var _wsClient *wsClient.WsClient
 var scrcpyClient *scrcpy.ScrcpyClient
 
 func Start(webPort int, width int, height int, mimeType string, password string, receiverPort int) {
@@ -92,38 +91,36 @@ func RegJavaClass(c JavaCallbackInterface) {
 	javaObj = &JavaClass{c}
 }
 
-func StartCastXClient(url string, password string, maxsize int, useRtsp bool) int {
+func StartWsClient(url string, password string, maxsize int) int {
 	if runtime.GOOS == "android" {
 		anet.SetAndroidVersion(14)
 	}
-	castXClient = &castxClient.CastXClient{}
-	if !useRtsp {
-		castXClient.SetLoginFun(func(dataInfo map[string]interface{}) {
-			jsonStr, err := json.Marshal(dataInfo)
-			if err == nil {
-				javaObj.JavaCall.LoginCall(string(jsonStr))
-			}
-		})
-		castXClient.SetOfferRespFun(func(dataInfo map[string]interface{}) {
-			jsonStr, err := json.Marshal(dataInfo)
-			if err == nil {
-				javaObj.JavaCall.OfferRespCall(string(jsonStr))
-			}
-		})
-	}
-	return castXClient.Start(url, password, maxsize, useRtsp)
+	_wsClient = &wsClient.WsClient{}
+	_wsClient.SetLoginFun(func(dataInfo map[string]interface{}) {
+		jsonStr, err := json.Marshal(dataInfo)
+		if err == nil {
+			javaObj.JavaCall.LoginCall(string(jsonStr))
+		}
+	})
+	_wsClient.SetOfferRespFun(func(dataInfo map[string]interface{}) {
+		jsonStr, err := json.Marshal(dataInfo)
+		if err == nil {
+			javaObj.JavaCall.OfferRespCall(string(jsonStr))
+		}
+	})
+	return _wsClient.Conect(url, password, maxsize)
 }
 
-func CastXClientSendOffer(offerJSON string) {
-	if castXClient != nil {
-		castXClient.SendOffer(offerJSON)
+func WsClientSendOffer(offerJSON string) {
+	if _wsClient != nil {
+		_wsClient.SendOffer(offerJSON)
 	}
 }
 
-func ShutdownCastXClient() {
-	if castXClient != nil {
-		castXClient.Shutdown()
-		castXClient = nil
+func ShutdownWsClient() {
+	if _wsClient != nil {
+		_wsClient.Shutdown()
+		_wsClient = nil
 	}
 }
 
@@ -143,20 +140,4 @@ func ShutdownScrcpyClient() {
 		scrcpyClient.Shutdown()
 		scrcpyClient = nil
 	}
-}
-
-func ParseH264SPS(sps []byte, _readCroppingFlag int) string {
-	readCroppingFlag := false
-	if _readCroppingFlag > 0 {
-		readCroppingFlag = true
-	}
-	info, err := comm.ParseSPS(sps, readCroppingFlag)
-	if err != nil {
-		return ""
-	}
-	data, err := json.Marshal(info)
-	if err != nil {
-		return ""
-	}
-	return string(data)
 }

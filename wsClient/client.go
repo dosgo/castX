@@ -1,4 +1,4 @@
-package castxClient
+package wsClient
 
 import (
 	"crypto/sha256"
@@ -6,47 +6,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"strconv"
 	"time"
 
 	"github.com/dosgo/castX/comm"
 	"github.com/gorilla/websocket"
-	"github.com/pion/webrtc/v4"
 )
 
-type CastXClient struct {
-	wsConn         *websocket.Conn
-	isAuth         bool
-	securityKey    string
-	listener       net.Listener
-	run            bool
-	LoginCall      func(map[string]interface{}) //登录回调
-	OfferRespCall  func(map[string]interface{}) //offer回调
-	rtsp           *serverHandler
-	peerConnection *webrtc.PeerConnection
+type WsClient struct {
+	wsConn        *websocket.Conn
+	isAuth        bool
+	securityKey   string
+	run           bool
+	LoginCall     func(map[string]interface{}) //登录回调
+	OfferRespCall func(map[string]interface{}) //offer回调
 }
 
-func (client *CastXClient) Start(wsUrl string, password string, maxSize int, useRtsp bool) int {
+func (client *WsClient) Conect(wsUrl string, password string, maxSize int) int {
 	var err error
 	client.wsConn, _, err = websocket.DefaultDialer.Dial(wsUrl, nil)
 	if err != nil {
 		return 0
-	}
-	//init websrc
-	if useRtsp {
-		client.initWebRtc()
-		client.rtsp = &serverHandler{}
-		go client.rtsp.Start(client.peerConnection)
-		client.SetLoginFun(func(data map[string]interface{}) {
-			if data["auth"].(bool) {
-				client.isAuth = true
-				client.CreateOffer()
-			}
-		})
-		client.SetOfferRespFun(func(data map[string]interface{}) {
-			client.SetRemoteDescription(data)
-		})
 	}
 	// 消息接收协程
 	go client.WsRecv(password, maxSize)
@@ -54,21 +34,17 @@ func (client *CastXClient) Start(wsUrl string, password string, maxSize int, use
 }
 
 // 信令交互
-func (client *CastXClient) SendOffer(offerJSON string) {
+func (client *WsClient) SendOffer(offerJSON string) {
 	client.wsConn.WriteJSON(comm.WSMessage{
 		Type: comm.MsgTypeOffer,
 		Data: offerJSON,
 	})
 }
-func (client *CastXClient) Shutdown() {
+func (client *WsClient) Shutdown() {
 	client.run = false
-	if client.listener != nil {
-		client.listener.Close()
-	}
-	client.peerConnection.Close()
 	client.isAuth = false
 }
-func (client *CastXClient) login(password string, maxSize int) {
+func (client *WsClient) login(password string, maxSize int) {
 	timestamp := time.Now().UnixMilli()
 	var srcData = client.securityKey + "|" + strconv.FormatInt(int64(timestamp), 10) + "|" + password
 	sum := sha256.Sum256([]byte(srcData))
@@ -86,7 +62,7 @@ func (client *CastXClient) login(password string, maxSize int) {
 		Data: string(argsStr),
 	})
 }
-func (client *CastXClient) WsRecv(password string, maxSize int) {
+func (client *WsClient) WsRecv(password string, maxSize int) {
 	var msg comm.WSMessage
 	defer client.wsConn.Close()
 	for {
@@ -113,10 +89,10 @@ func (client *CastXClient) WsRecv(password string, maxSize int) {
 		}
 	}
 }
-func (client *CastXClient) SetLoginFun(_loginCall func(map[string]interface{})) {
+func (client *WsClient) SetLoginFun(_loginCall func(map[string]interface{})) {
 	client.LoginCall = _loginCall
 }
 
-func (client *CastXClient) SetOfferRespFun(_offerRespCall func(map[string]interface{})) {
+func (client *WsClient) SetOfferRespFun(_offerRespCall func(map[string]interface{})) {
 	client.OfferRespCall = _offerRespCall
 }

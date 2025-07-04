@@ -1,5 +1,5 @@
 // Package main contains an example.
-package castxClient
+package comm
 
 import (
 	"encoding/binary"

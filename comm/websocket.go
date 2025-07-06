@@ -121,7 +121,7 @@ func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		}
 		return
 	}
-	conn := &WsSafeConn{conn: _conn}
+	conn := NewWsSafeConn(_conn)
 	wsServer.auth.Store(conn, false)
 	wsServer.connectionManager.Add(conn)
 	defer func() {

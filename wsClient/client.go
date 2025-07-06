@@ -14,7 +14,7 @@ import (
 )
 
 type WsClient struct {
-	wsConn        *websocket.Conn
+	wsConn        *comm.WsSafeConn
 	isAuth        bool
 	securityKey   string
 	run           bool
@@ -24,10 +24,11 @@ type WsClient struct {
 
 func (client *WsClient) Conect(wsUrl string, password string, maxSize int) int {
 	var err error
-	client.wsConn, _, err = websocket.DefaultDialer.Dial(wsUrl, nil)
+	conn, _, err := websocket.DefaultDialer.Dial(wsUrl, nil)
 	if err != nil {
 		return 0
 	}
+	client.wsConn = comm.NewWsSafeConn(conn)
 	// 消息接收协程
 	go client.WsRecv(password, maxSize)
 	return 0

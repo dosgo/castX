@@ -11,6 +11,10 @@ type WsSafeConn struct {
 	mu   sync.Mutex
 }
 
+func NewWsSafeConn(_conn *websocket.Conn) *WsSafeConn {
+	return &WsSafeConn{conn: _conn}
+}
+
 func (sc *WsSafeConn) WriteJSON(msg interface{}) error {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()

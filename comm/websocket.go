@@ -26,7 +26,6 @@ type WsServer struct {
 	config            *Config
 	auth              sync.Map
 	tokens            *ttlMap
-	mu                sync.Mutex
 }
 
 var upgrader = websocket.Upgrader{
@@ -56,7 +55,7 @@ func NewWs(config *Config, webrtcServer *WebrtcServer) *WsServer {
 	wsServer.config = config
 	wsServer.webrtcServer = webrtcServer
 	wsServer.connectionManager = &ConnectionManager{
-		connections: make(map[*websocket.Conn]bool),
+		connections: make(map[*WsSafeConn]bool),
 	}
 	wsServer.tokens = NewTTLMap(20)
 	return wsServer
@@ -90,7 +89,7 @@ func (wsServer *WsServer) BroadcastInfo() {
 }
 
 /*发送初始化数据*/
-func (wsServer *WsServer) SendInitConfig(c *websocket.Conn) {
+func (wsServer *WsServer) SendInitConfig(c *WsSafeConn) {
 	msg := WSMessage{
 		Type: MsgTypeInitConfig,
 		Data: map[string]interface{}{
@@ -98,7 +97,7 @@ func (wsServer *WsServer) SendInitConfig(c *websocket.Conn) {
 			"securityKey": wsServer.config.SecurityKey,
 		},
 	}
-	wsServer.WriteMessage(c, msg)
+	c.WriteJSON(msg)
 }
 func (wsServer *WsServer) Shutdown() {
 	wsServer.tokens.Close()
@@ -108,20 +107,21 @@ func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		http.Error(w, "Access denied. Only IPv4 LAN allowed.", http.StatusForbidden)
 		return
 	}
-	conn, err := upgrader.Upgrade(w, r, nil)
+	_conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 	//如果是usb连接上的websocket
 	if r.URL.Path == "/usbWs" {
 		if wsServer.usbConnectCall != nil {
-			wsServer.usbConnectCall(conn)
+			wsServer.usbConnectCall(_conn)
 		} else {
 			fmt.Printf("usbConnectCall nil\r\n")
-			conn.Close()
+			_conn.Close()
 		}
 		return
 	}
+	conn := &WsSafeConn{conn: _conn}
 	wsServer.auth.Store(conn, false)
 	wsServer.connectionManager.Add(conn)
 	defer func() {
@@ -164,7 +164,7 @@ func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 
 // HTTP Handler that accepts an Offer and returns an Answer
 // adds outboundVideoTrack to PeerConnection
-func (wsServer *WsServer) handleOffer(conn *websocket.Conn, data interface{}) {
+func (wsServer *WsServer) handleOffer(conn *WsSafeConn, data interface{}) {
 	dataStr, ok := data.(string)
 	if !ok {
 		return
@@ -176,7 +176,7 @@ func (wsServer *WsServer) handleOffer(conn *websocket.Conn, data interface{}) {
 		fmt.Printf("handleOffer err:%v\r\n", err)
 		return
 	}
-	wsServer.WriteMessage(conn, WSMessage{
+	conn.WriteJSON(WSMessage{
 		Type: MsgTypeOfferResp,
 		Data: map[string]interface{}{
 			"GOOS": runtime.GOOS,
@@ -185,14 +185,8 @@ func (wsServer *WsServer) handleOffer(conn *websocket.Conn, data interface{}) {
 	})
 }
 
-func (wsServer *WsServer) WriteMessage(conn *websocket.Conn, msg WSMessage) {
-	wsServer.mu.Lock()
-	defer wsServer.mu.Unlock()
-	conn.WriteJSON(msg)
-}
-
 // 处理控制命令的WebSocket实现
-func (wsServer *WsServer) handleControl(conn *websocket.Conn, data interface{}) {
+func (wsServer *WsServer) handleControl(conn *WsSafeConn, data interface{}) {
 	var controlData map[string]interface{}
 	dataStr, ok := data.(string)
 	if !ok {
@@ -208,7 +202,7 @@ func (wsServer *WsServer) handleControl(conn *websocket.Conn, data interface{}) 
 		wsServer.controlCall(controlData)
 	}
 
-	wsServer.WriteMessage(conn, WSMessage{
+	conn.WriteJSON(WSMessage{
 		Type: MsgTypeControlResp,
 		Data: map[string]interface{}{
 			"code": 0,
@@ -216,7 +210,7 @@ func (wsServer *WsServer) handleControl(conn *websocket.Conn, data interface{}) 
 	})
 }
 
-func (wsServer *WsServer) handleLogin(conn *websocket.Conn, data interface{}) {
+func (wsServer *WsServer) handleLogin(conn *WsSafeConn, data interface{}) {
 	//解析参数
 	dataStr, ok := data.(string)
 	if !ok {
@@ -255,7 +249,7 @@ func (wsServer *WsServer) handleLogin(conn *websocket.Conn, data interface{}) {
 		auth = true
 	}
 
-	wsServer.WriteMessage(conn, WSMessage{
+	conn.WriteJSON(WSMessage{
 		Type: MsgTypeLoginAuthResp,
 		Data: map[string]interface{}{
 			"auth": auth,

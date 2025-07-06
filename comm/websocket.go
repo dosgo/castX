@@ -26,6 +26,7 @@ type WsServer struct {
 	config            *Config
 	auth              sync.Map
 	tokens            *ttlMap
+	mu                sync.Mutex
 }
 
 var upgrader = websocket.Upgrader{
@@ -97,7 +98,7 @@ func (wsServer *WsServer) SendInitConfig(c *websocket.Conn) {
 			"securityKey": wsServer.config.SecurityKey,
 		},
 	}
-	c.WriteJSON(msg)
+	wsServer.WriteMessage(c, msg)
 }
 func (wsServer *WsServer) Shutdown() {
 	wsServer.tokens.Close()
@@ -175,13 +176,19 @@ func (wsServer *WsServer) handleOffer(conn *websocket.Conn, data interface{}) {
 		fmt.Printf("handleOffer err:%v\r\n", err)
 		return
 	}
-	conn.WriteJSON(WSMessage{
+	wsServer.WriteMessage(conn, WSMessage{
 		Type: MsgTypeOfferResp,
 		Data: map[string]interface{}{
 			"GOOS": runtime.GOOS,
 			"sdp":  webRtcSession,
 		},
 	})
+}
+
+func (wsServer *WsServer) WriteMessage(conn *websocket.Conn, msg WSMessage) {
+	wsServer.mu.Lock()
+	defer wsServer.mu.Unlock()
+	conn.WriteJSON(msg)
 }
 
 // 处理控制命令的WebSocket实现
@@ -201,7 +208,7 @@ func (wsServer *WsServer) handleControl(conn *websocket.Conn, data interface{}) 
 		wsServer.controlCall(controlData)
 	}
 
-	conn.WriteJSON(WSMessage{
+	wsServer.WriteMessage(conn, WSMessage{
 		Type: MsgTypeControlResp,
 		Data: map[string]interface{}{
 			"code": 0,
@@ -248,7 +255,7 @@ func (wsServer *WsServer) handleLogin(conn *websocket.Conn, data interface{}) {
 		auth = true
 	}
 
-	conn.WriteJSON(WSMessage{
+	wsServer.WriteMessage(conn, WSMessage{
 		Type: MsgTypeLoginAuthResp,
 		Data: map[string]interface{}{
 			"auth": auth,

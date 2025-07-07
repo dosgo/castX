@@ -105,6 +105,11 @@ func WsClientSendOffer(offerJSON string) {
 		_wsClient.SendOffer(offerJSON)
 	}
 }
+func WsClientSendControl(args string) {
+	if _wsClient != nil {
+		_wsClient.SendControl(args)
+	}
+}
 
 func ShutdownWsClient() {
 	if _wsClient != nil {

@@ -97,3 +97,10 @@ func (client *WsClient) SetLoginFun(_loginCall func(map[string]interface{})) {
 func (client *WsClient) SetOfferRespFun(_offerRespCall func(map[string]interface{})) {
 	client.OfferRespCall = _offerRespCall
 }
+
+func (client *WsClient) SendControl(args string) {
+	client.wsConn.WriteJSON(comm.WSMessage{
+		Type: comm.MsgTypeControl,
+		Data: args,
+	})
+}

@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	"github.com/dosgo/castX/castxServer"
+	"github.com/dosgo/castX/comm"
 	"github.com/dosgo/castX/wsClient"
 	"github.com/wlynxg/anet"
 
@@ -66,6 +67,7 @@ type JavaCallbackInterface interface {
 	SetMaxSize(maxsize int)
 	LoginCall(data string)
 	OfferRespCall(data string)
+	InfoNotifyCall(data string)
 }
 
 var c JavaCallbackInterface
@@ -97,6 +99,13 @@ func StartWsClient(url string, password string, maxsize int) int {
 			javaObj.JavaCall.OfferRespCall(string(jsonStr))
 		}
 	})
+	_wsClient.SetInfoNotifyFun(func(dataInfo map[string]interface{}) {
+		jsonStr, err := json.Marshal(dataInfo)
+		if err == nil {
+			javaObj.JavaCall.InfoNotifyCall(string(jsonStr))
+		}
+	})
+
 	return _wsClient.Conect(url, password, maxsize)
 }
 
@@ -107,7 +116,12 @@ func WsClientSendOffer(offerJSON string) {
 }
 func WsClientSendControl(args string) {
 	if _wsClient != nil {
-		_wsClient.SendControl(args)
+		_wsClient.SendCmd(comm.MsgTypeControl, args)
+	}
+}
+func WsClientConnectAdb(args string) {
+	if _wsClient != nil {
+		_wsClient.SendCmd(comm.MsgTypeConnectAdb, args)
 	}
 }
 

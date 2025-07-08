@@ -127,9 +127,11 @@ func (webrtcServer *WebrtcServer) getSdp(r io.Reader) (*webrtc.SessionDescriptio
 func NewWebRtc(mimeType string) (*WebrtcServer, error) {
 	var err error
 	webrtcServer := &WebrtcServer{}
+	videoRTCPFeedback := []webrtc.RTCPFeedback{{"goog-remb", ""}, {"ccm", "fir"}, {"nack", ""}, {"nack", "pli"}}
 	//视频轨道
 	webrtcServer.outboundVideoTrack, err = webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{
-		MimeType: mimeType,
+		RTCPFeedback: videoRTCPFeedback,
+		MimeType:     mimeType,
 	}, "screens", "screens")
 	if err != nil {
 		return nil, err

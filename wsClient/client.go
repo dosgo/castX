@@ -14,12 +14,13 @@ import (
 )
 
 type WsClient struct {
-	wsConn        *comm.WsSafeConn
-	isAuth        bool
-	securityKey   string
-	run           bool
-	LoginCall     func(map[string]interface{}) //登录回调
-	OfferRespCall func(map[string]interface{}) //offer回调
+	wsConn         *comm.WsSafeConn
+	isAuth         bool
+	securityKey    string
+	run            bool
+	LoginCall      func(map[string]interface{}) //登录回调
+	OfferRespCall  func(map[string]interface{}) //offer回调
+	InfoNotifyCall func(map[string]interface{}) //信息通知回调
 }
 
 func (client *WsClient) Conect(wsUrl string, password string, maxSize int) int {
@@ -87,6 +88,11 @@ func (client *WsClient) WsRecv(password string, maxSize int) {
 			if client.OfferRespCall != nil {
 				client.OfferRespCall(data)
 			}
+		case comm.MsgTypeInfoNotify:
+			data := msg.Data.(map[string]interface{})
+			if client.InfoNotifyCall != nil {
+				client.InfoNotifyCall(data)
+			}
 		}
 	}
 }
@@ -98,9 +104,13 @@ func (client *WsClient) SetOfferRespFun(_offerRespCall func(map[string]interface
 	client.OfferRespCall = _offerRespCall
 }
 
-func (client *WsClient) SendControl(args string) {
+func (client *WsClient) SetInfoNotifyFun(_infoNotifyCall func(map[string]interface{})) {
+	client.InfoNotifyCall = _infoNotifyCall
+}
+
+func (client *WsClient) SendCmd(cmd string, args string) {
 	client.wsConn.WriteJSON(comm.WSMessage{
-		Type: comm.MsgTypeControl,
+		Type: cmd,
 		Data: args,
 	})
 }

@@ -4,6 +4,7 @@ package castX
 
 import (
 	"encoding/json"
+	"fmt"
 	"runtime"
 
 	"github.com/dosgo/castX/castxServer"
@@ -121,6 +122,7 @@ func WsClientSendControl(args string) {
 }
 func WsClientConnectAdb(args string) {
 	if _wsClient != nil {
+		fmt.Printf("WsClientConnectAdb args:%s\r\n", args)
 		_wsClient.SendCmd(comm.MsgTypeConnectAdb, args)
 	}
 }
@@ -130,10 +132,6 @@ func ShutdownWsClient() {
 		_wsClient.Shutdown()
 		_wsClient = nil
 	}
-}
-
-func SetSize(videoWidth int, videoHeight int, orientation int) {
-	castx.UpdateConfig(videoWidth, videoHeight, orientation)
 }
 
 func StartScrcpyClient(webPort int, peerName string, savaPath string, password string) {

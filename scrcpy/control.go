@@ -87,49 +87,54 @@ func SendDisplayPower(controlConn net.Conn, on byte) {
 }
 
 func controlCall(controlConn net.Conn, config *comm.Config, controlData map[string]interface{}) {
+	var videoWidth float64 = 0
+	var videoHeight float64 = 0
+
+	videoWidth = float64(config.VideoWidth)
+	videoHeight = float64(config.VideoHeight)
 
 	if controlData["type"] == "click" {
 		if f, ok := controlData["x"].(float64); ok {
-			x := uint32(f)
-			y := uint32(controlData["y"].(float64))
+
+			x := f
+			y := controlData["y"].(float64)
+
 			duration := uint32(controlData["duration"].(float64))
 			var pointerId uint64 = 0
-			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, uint32(x), uint32(y), uint16(videoWidth), uint16(videoHeight), uint16(mtRand(100, 200)))
 			time.Sleep(time.Millisecond * time.Duration(duration)) // 等待100毫秒
-			SendKTouchEvent(controlConn, ACTION_UP, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
-			fmt.Printf("click:%d,%d VideoWidth:%d VideoHeight:%d\r\n", x, y, config.VideoWidth, config.VideoHeight) // 打印 x 和 y 的
+			SendKTouchEvent(controlConn, ACTION_UP, pointerId, uint32(x), uint32(y), uint16(videoWidth), uint16(videoHeight), uint16(mtRand(100, 200)))
+			fmt.Printf("click:%d,%d VideoWidth:%d VideoHeight:%d\r\n", uint32(x), uint32(y), videoWidth, videoHeight) // 打印 x 和 y 的
 		}
 	}
-	if controlData["type"] == "swipe" {
-		if code, ok := controlData["code"].(string); ok {
-			fmt.Printf("code:%s\r\n", code)
-			//SendScrollEvent(1, 100, 100)
-		}
-	}
+
 	if controlData["type"] == "panstart" {
 		if f, ok := controlData["x"].(float64); ok {
-			x := uint32(f)
-			y := uint32(controlData["y"].(float64))
+			x := f
+			y := controlData["y"].(float64)
+
 			var pointerId uint64 = 0
-			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_DOWN, pointerId, uint32(x), uint32(y), uint16(videoWidth), uint16(videoHeight), uint16(mtRand(100, 200)))
 			fmt.Printf("panstart:%d,%d\r\n", x, y) // 打印 x 和 y 的值，用于调试，你可以根据需要修改打印 forma
 		}
 	}
 	if controlData["type"] == "pan" {
 		if f, ok := controlData["x"].(float64); ok {
-			x := uint32(f)
-			y := uint32(controlData["y"].(float64))
+			x := f
+			y := controlData["y"].(float64)
+
 			var pointerId uint64 = 0
-			SendKTouchEvent(controlConn, ACTION_MOVE, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_MOVE, pointerId, uint32(x), uint32(y), uint16(videoWidth), uint16(videoHeight), uint16(mtRand(100, 200)))
 			fmt.Printf("pan:%d,%d\r\n", x, y)
 		}
 	}
 	if controlData["type"] == "panend" {
 		if f, ok := controlData["x"].(float64); ok {
-			x := uint32(f)
-			y := uint32(controlData["y"].(float64))
+			x := f
+			y := controlData["y"].(float64)
+
 			var pointerId uint64 = 0
-			SendKTouchEvent(controlConn, ACTION_UP, pointerId, x, y, uint16(config.VideoWidth), uint16(config.VideoHeight), uint16(mtRand(100, 200)))
+			SendKTouchEvent(controlConn, ACTION_UP, pointerId, uint32(x), uint32(y), uint16(videoWidth), uint16(videoHeight), uint16(mtRand(100, 200)))
 			fmt.Printf("panend:%d,%d\r\n", x, y)
 		}
 	}

@@ -99,7 +99,8 @@ func (scrcpyClient *ScrcpyClient) adbConnectOk(adbClient *libadb.AdbClient, savP
 		// audio-output-buffer=100 --audio-buffer=100
 		//'profile=4200,b-frames=0,preset=ultrafast'
 		//repeat-previous-frame-after=5
-		cmd := fmt.Sprintf("CLASSPATH=/data/local/tmp/scrcpy-server app_process / com.genymobile.scrcpy.Server 3.1 scid=%s  log_level=debug cleanup=true video_bit_rate=4000000  video_codec_options=profile=65536 %s", scid, maxSize)
+		//video_codec_options=profile=65536
+		cmd := fmt.Sprintf("CLASSPATH=/data/local/tmp/scrcpy-server app_process / com.genymobile.scrcpy.Server 3.1 scid=%s  log_level=debug cleanup=true video_bit_rate=4000000   %s", scid, maxSize)
 		adbClient.ShellCmd(cmd, true)
 
 	}()

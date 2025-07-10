@@ -4,12 +4,9 @@ package castX
 
 import (
 	"encoding/json"
-	"fmt"
 	"runtime"
 
 	"github.com/dosgo/castX/castxServer"
-	"github.com/dosgo/castX/comm"
-	"github.com/dosgo/castX/wsClient"
 	"github.com/wlynxg/anet"
 
 	"github.com/dosgo/castX/scrcpy"
@@ -17,7 +14,6 @@ import (
 )
 
 var castx *castxServer.Castx
-var _wsClient *wsClient.WsClient
 var scrcpyClient *scrcpy.ScrcpyClient
 
 func Start(webPort int, width int, height int, mimeType string, password string, receiverPort int) {
@@ -66,9 +62,6 @@ type JavaCallbackInterface interface {
 	ControlCall(param string)
 	WebRtcConnectionStateChange(count int)
 	SetMaxSize(maxsize int)
-	LoginCall(data string)
-	OfferRespCall(data string)
-	InfoNotifyCall(data string)
 }
 
 var c JavaCallbackInterface
@@ -81,57 +74,6 @@ var javaObj *JavaClass
 
 func RegJavaClass(c JavaCallbackInterface) {
 	javaObj = &JavaClass{c}
-}
-
-func StartWsClient(url string, password string, maxsize int) int {
-	if runtime.GOOS == "android" {
-		anet.SetAndroidVersion(14)
-	}
-	_wsClient = &wsClient.WsClient{}
-	_wsClient.SetLoginFun(func(dataInfo map[string]interface{}) {
-		jsonStr, err := json.Marshal(dataInfo)
-		if err == nil {
-			javaObj.JavaCall.LoginCall(string(jsonStr))
-		}
-	})
-	_wsClient.SetOfferRespFun(func(dataInfo map[string]interface{}) {
-		jsonStr, err := json.Marshal(dataInfo)
-		if err == nil {
-			javaObj.JavaCall.OfferRespCall(string(jsonStr))
-		}
-	})
-	_wsClient.SetInfoNotifyFun(func(dataInfo map[string]interface{}) {
-		jsonStr, err := json.Marshal(dataInfo)
-		if err == nil {
-			javaObj.JavaCall.InfoNotifyCall(string(jsonStr))
-		}
-	})
-
-	return _wsClient.Conect(url, password, maxsize)
-}
-
-func WsClientSendOffer(offerJSON string) {
-	if _wsClient != nil {
-		_wsClient.SendOffer(offerJSON)
-	}
-}
-func WsClientSendControl(args string) {
-	if _wsClient != nil {
-		_wsClient.SendCmd(comm.MsgTypeControl, args)
-	}
-}
-func WsClientConnectAdb(args string) {
-	if _wsClient != nil {
-		fmt.Printf("WsClientConnectAdb args:%s\r\n", args)
-		_wsClient.SendCmd(comm.MsgTypeConnectAdb, args)
-	}
-}
-
-func ShutdownWsClient() {
-	if _wsClient != nil {
-		_wsClient.Shutdown()
-		_wsClient = nil
-	}
 }
 
 func StartScrcpyClient(webPort int, peerName string, savaPath string, password string) {

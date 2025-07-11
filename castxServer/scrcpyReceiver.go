@@ -85,6 +85,9 @@ func (castx *Castx) handleAudio(_conn net.Conn) error {
 		} else {
 			pts = int64(frameHeader.PTS)
 			//pts = scrcpyClient.fixAudioPts(int64(h.PTS))
+			if n > 20 {
+				fmt.Printf("SendAudio len:%d :%+v\r\n", n, data[:20])
+			}
 			castx.WebrtcServer.SendAudio(data[:n], pts)
 		}
 	}

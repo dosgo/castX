@@ -1,40 +1,42 @@
 package comm
 
 import (
-	"fmt"
+	"errors"
+	"io"
 	"sync"
 	"time"
+
+	"github.com/pion/webrtc/v4/pkg/media/oggreader"
 )
 
 type AudioWriter struct {
 	buffer       []byte
 	mu           sync.Mutex
-	sampleRate   int
 	webrtcServer *WebrtcServer
 }
 
 func NewAudioWriter(webrtcServer *WebrtcServer) *AudioWriter {
-	a := &AudioWriter{
-		sampleRate: 48000,
-	}
+	a := &AudioWriter{}
 	a.webrtcServer = webrtcServer
 	return a
 }
 
-func (a *AudioWriter) Write(p []byte) (n int, err error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	a.buffer = append(a.buffer, p...)
-	// 按20ms分割音频帧（48000Hz * 20ms = 960采样）
-	frameSize := 960 * 2 * 2 // 960采样 * 2声道 * 2字节(16bit)
-	for len(a.buffer) >= frameSize {
-		audioFrame := a.buffer[:frameSize]
-		if err := a.webrtcServer.SendAudio(audioFrame, time.Now().Local().UnixMicro()); err != nil {
-			fmt.Printf("AudioWriter SendWebrtc error:%v\r\n", err)
-			return 0, err
-		}
-		a.buffer = a.buffer[frameSize:]
+func (a *AudioWriter) Strem(readStrem io.Reader) {
+	// Open on oggfile in non-checksum mode.
+	ogg, _, oggErr := oggreader.NewWith(readStrem)
+	if oggErr != nil {
+		panic(oggErr)
 	}
-	return len(p), nil
+	var lastGranule uint64
+	for {
+		pageData, pageHeader, oggErr := ogg.ParseNextPage()
+		if errors.Is(oggErr, io.EOF) {
+			break
+		}
+
+		sampleCount := float64(pageHeader.GranulePosition - lastGranule)
+		lastGranule = pageHeader.GranulePosition
+		sampleDuration := time.Duration((sampleCount/48000)*1000) * time.Millisecond
+		a.webrtcServer.SendAudioNew(pageData, sampleDuration)
+	}
 }

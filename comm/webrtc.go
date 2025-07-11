@@ -57,6 +57,14 @@ func (webrtcServer *WebrtcServer) SendAudio(nal []byte, timestamp int64) error {
 		Timestamp: time.UnixMicro(timestamp),
 	})
 }
+func (webrtcServer *WebrtcServer) SendAudioNew(nal []byte, duration time.Duration) error {
+
+	return webrtcServer.outboundAudioTrack.WriteSample(media.Sample{
+		Data:      nal,
+		Duration:  duration,
+		Timestamp: time.Now(),
+	})
+}
 
 // 智能添加起始码
 func addStartCodeIfNeeded(data []byte) []byte {

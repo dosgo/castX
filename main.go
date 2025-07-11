@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"time"
 
@@ -81,29 +80,33 @@ func ffmpegDesktop(port int, webrtcServer *comm.WebrtcServer) {
 
 /*audio*/
 func ffmpegAudio(port int, webrtcServer *comm.WebrtcServer) {
+
 	audioOutput := ffmpeg.Input("audio=virtual-audio-capturer",
 		ffmpeg.KwArgs{
 			"f":           "dshow",
 			"sample_rate": "48000",
-			"channels":    "2",
+
+			"channels": "2",
 		}).Output(fmt.Sprintf("tcp://127.0.0.1:%d?listen", port),
 		ffmpeg.KwArgs{
 			"acodec":        "libopus",
-			"audio_bitrate": "64k",
+			"ab":            "64k",
 			"f":             "opus",
+			"ar":            "48000",
+			"ac":            "2",
+			"page_duration": "20000",
 		})
 
 	go func() {
 		time.Sleep(time.Second * 5)
-		audioWriter := comm.NewAudioWriter(webrtcServer)
 		// 连接到FFmpeg服务器
 		audioConn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)))
 		if err != nil {
 			fmt.Printf("音频接收失败: %v\n", err)
 			return
 		}
-		defer audioConn.Close()
-		io.Copy(audioWriter, audioConn)
+		audioWriter := comm.NewAudioWriter(webrtcServer)
+		audioWriter.Strem(audioConn)
 	}()
 	audioOutput.Run()
 }

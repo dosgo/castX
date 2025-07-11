@@ -64,7 +64,7 @@ func ffmpegDesktop(port int, webrtcServer *comm.WebrtcServer) {
 			})
 
 	go func() {
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 2)
 		// 连接到FFmpeg服务器
 		videoConn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)))
 		if err != nil {
@@ -98,7 +98,7 @@ func ffmpegAudio(port int, webrtcServer *comm.WebrtcServer) {
 		})
 
 	go func() {
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 2)
 		// 连接到FFmpeg服务器
 		audioConn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)))
 		if err != nil {

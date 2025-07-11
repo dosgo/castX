@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
+	"net"
+	"time"
 
 	"github.com/dosgo/castX/castxServer"
 	"github.com/dosgo/castX/comm"
@@ -34,18 +36,15 @@ func main() {
 				robotgo.Click("right", false)
 			}
 		}
-
 	})
 
-	go ffmpegDesktop(false, castx.WebrtcServer)
+	go ffmpegDesktop(9901, castx.WebrtcServer)
+	go ffmpegAudio(9902, castx.WebrtcServer)
 	fmt.Scanln()
 }
 
 /*启动录屏*/
-func ffmpegDesktop(audio bool, webrtcServer *comm.WebrtcServer) {
-	h264Buf := comm.NewMemoryWriter(webrtcServer, framerate)
-	var stream []*ffmpeg.Stream
-	var ioW []io.Writer
+func ffmpegDesktop(port int, webrtcServer *comm.WebrtcServer) {
 	// 使用ffmpeg-go捕获屏幕并编码为H264
 	videoOutput := ffmpeg.Input("desktop",
 		ffmpeg.KwArgs{
@@ -53,10 +52,9 @@ func ffmpegDesktop(audio bool, webrtcServer *comm.WebrtcServer) {
 			"framerate": framerate, // 帧率
 			//"video_size": fmt.Sprintf("%dx%d", width, height), // 分辨率
 		}).
-		Output("pipe:1", // 输出到标准输出
+		Output(fmt.Sprintf("tcp://127.0.0.1:%d?listen", port), // 输出到标准输出
 			ffmpeg.KwArgs{
 				"crf":         "28",
-				"map":         "0:v",
 				"preset":      "ultrafast",                // 最快编码
 				"tune":        "zerolatency",              // 零延迟模式
 				"x264-params": "no-scenecut=1",            // 零延迟模式
@@ -65,27 +63,47 @@ func ffmpegDesktop(audio bool, webrtcServer *comm.WebrtcServer) {
 				"f":           "h264",                     // 原始H264输出
 				"movflags":    "frag_keyframe+empty_moov", // 流式优化
 			})
-	stream = append(stream, videoOutput)
-	ioW = append(ioW, h264Buf)
-	if audio {
 
+	go func() {
+		time.Sleep(time.Second * 5)
+		// 连接到FFmpeg服务器
+		videoConn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)))
+		if err != nil {
+			fmt.Printf("视频接收失败: %v\n", err)
+			return
+		}
+		processor := comm.NewH264Stream(webrtcServer)
+		// 启动处理
+		processor.ProcessStream(videoConn)
+	}()
+	videoOutput.Run()
+}
+
+/*audio*/
+func ffmpegAudio(port int, webrtcServer *comm.WebrtcServer) {
+	audioOutput := ffmpeg.Input("audio=virtual-audio-capturer",
+		ffmpeg.KwArgs{
+			"f":           "dshow",
+			"sample_rate": "48000",
+			"channels":    "2",
+		}).Output(fmt.Sprintf("tcp://127.0.0.1:%d?listen", port),
+		ffmpeg.KwArgs{
+			"acodec":        "libopus",
+			"audio_bitrate": "64k",
+			"f":             "opus",
+		})
+
+	go func() {
+		time.Sleep(time.Second * 5)
 		audioWriter := comm.NewAudioWriter(webrtcServer)
-		audioOutput := ffmpeg.Input("audio=virtual-audio-capturer",
-			ffmpeg.KwArgs{
-				"f":           "dshow",
-				"sample_rate": "48000",
-				"channels":    "2",
-			}).Output("pipe:2",
-			ffmpeg.KwArgs{
-				"map":           "1:a",
-				"acodec":        "libopus",
-				"audio_bitrate": "64k",
-				"f":             "opus",
-			})
-		stream = append(stream, audioOutput)
-		ioW = append(ioW, audioWriter)
-	}
-
-	ffmpeg.MergeOutputs(stream...).WithOutput(ioW...).OverWriteOutput().
-		Run()
+		// 连接到FFmpeg服务器
+		audioConn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)))
+		if err != nil {
+			fmt.Printf("音频接收失败: %v\n", err)
+			return
+		}
+		defer audioConn.Close()
+		io.Copy(audioWriter, audioConn)
+	}()
+	audioOutput.Run()
 }

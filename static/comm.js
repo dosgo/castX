@@ -103,7 +103,7 @@ function initWebRTC() {
         iceConnectionState=pc.iceConnectionState;
         if(pc.iceConnectionState=='disconnected'){
             setTimeout(() => {
-                    if(this.remoteVideo!=null&&!this.remoteVideo.paused){
+                    if(remoteVideo!=null&&!remoteVideo.paused){
                         if(iceConnectionState=='disconnected'){
                            connectWs();
                         }

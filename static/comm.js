@@ -10,6 +10,7 @@ let orientation=0;//默认方向
 var securityKey=""
 var iceConnectionState='';
 var ws;
+var autoIntervalId=null;
 let log = msg => {
     document.getElementById('logs').innerHTML += msg + '<br>'
 }
@@ -101,26 +102,41 @@ function initWebRTC() {
     pc.oniceconnectionstatechange = function () {
         log(pc.iceConnectionState);
         iceConnectionState=pc.iceConnectionState;
-        if(pc.iceConnectionState=='disconnected'){
-            setTimeout(() => {
-                    if(remoteVideo!=null&&!remoteVideo.paused){
-                        if(iceConnectionState=='disconnected'){
-                           connectWs();
-                        }
-                    }
-            }, 60);   
-        }
     }
     pc.ontrack = function (event) {
         if (event.track.kind === 'video') {
-                console.log('收到视频轨道');
-                remoteVideo.autoplay = true;
-                remoteVideo.muted = false; 
-                remoteVideo.srcObject = event.streams[0];
-                console.log( 'streams',event.streams[0]);
+            console.log('收到视频轨道');
+            remoteVideo.autoplay = true;
+            remoteVideo.muted = false; 
+            remoteVideo.srcObject = event.streams[0];
+            console.log( 'streams',event.streams[0]);
         }
     }
     sendOffer(false);
+    autoReconect();
+}
+
+function autoReconect(){
+    if(autoIntervalId!=null){
+        return;
+    }
+    autoIntervalId = setInterval(() => {
+        if(videoVm&&videoVm.isPlaying){
+            
+            if(remoteVideo!=null&&!remoteVideo.paused){
+                if(iceConnectionState=='disconnected'){
+                    connectWs();
+                }
+            }
+        }
+    }, 1000*60);
+}
+
+function  clearAutoInterval(){
+    if(autoIntervalId){
+        clearInterval(autoIntervalId);
+        autoIntervalId=null;
+    }
 }
 
 // 发送SDP Offer

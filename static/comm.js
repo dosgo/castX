@@ -8,68 +8,69 @@ let targetWidth=0;
 let targetHeight=0;
 let orientation=0;//默认方向
 var securityKey=""
+var iceConnectionState='';
+var ws;
 let log = msg => {
     document.getElementById('logs').innerHTML += msg + '<br>'
 }
 
+function connectWs() {
+    ws = new WebSocket(`ws://${location.host}/ws`);
+    ws.onopen = () => {
+        log('websocket connected');
+    };
+    ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'offerResponse') {
+            pc.setRemoteDescription(msg.data.sdp);
+        }
+        if (msg.type === 'infoNotify') {
+            orientation = msg.data.orientation;
+            videoHeight = msg.data.videoHeight;
+            videoWidth  = msg.data.videoWidth;
+            
+            //如果使用了adb
+            if (msg.data.useAdb==true) {
+                if (typeof appvm !== 'undefined'){
+                    appvm.isConnected=msg.data.adbConnect;
+                }
+                if (typeof videoVm !== 'undefined'){
+                    videoVm.isAndroid=true;
+                    videoVm.useAdb=true;
 
-
-const ws = new WebSocket(`ws://${location.host}/ws`);
-ws.onopen = () => {
-    log('websocket connected');
-};
-ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-    if (msg.type === 'offerResponse') {
-        pc.setRemoteDescription(msg.data.sdp);
-    }
-    if (msg.type === 'infoNotify') {
-        orientation = msg.data.orientation;
-        videoHeight = msg.data.videoHeight;
-        videoWidth  = msg.data.videoWidth;
-        
-        //如果使用了adb
-        if (msg.data.useAdb==true) {
-            if (typeof appvm !== 'undefined'){
-                appvm.isConnected=msg.data.adbConnect;
-            }
-            if (typeof videoVm !== 'undefined'){
-                videoVm.isAndroid=true;
-                videoVm.useAdb=true;
-
+                }
             }
         }
-    }
-    //初始化配置
-    if (msg.type === 'initConfig') {
-        securityKey  = msg.data.securityKey;
-        GOOS=msg.data.GOOS;
-        if(GOOS=='android'){
-            document.querySelectorAll('.androidMenu').forEach(el => {
-                el.style.display = 'inline-block'; // 或 flex/grid/inline-block 等
-            });
-            if (typeof videoVm !== 'undefined'){
-                videoVm.isAndroid=true;
+        //初始化配置
+        if (msg.type === 'initConfig') {
+            securityKey  = msg.data.securityKey;
+            GOOS=msg.data.GOOS;
+            if(GOOS=='android'){
+                document.querySelectorAll('.androidMenu').forEach(el => {
+                    el.style.display = 'inline-block'; // 或 flex/grid/inline-block 等
+                });
+                if (typeof videoVm !== 'undefined'){
+                    videoVm.isAndroid=true;
+                }
+            }
+            login();//请求登录
+        }
+        //登录成功
+        if (msg.type === 'loginAuthResp') {
+            if(msg.data.auth){
+                if (typeof videoVm !== 'undefined'){
+                    videoVm.isAuth=true;
+                    videoVm.errorMessage="";
+                }
+                initWebRTC();
+            }else{
+                if (typeof videoVm !== 'undefined'){
+                    videoVm.errorMessage=getLang('loginErrMsg');
+                }
             }
         }
-        login();//请求登录
-    }
-    //登录成功
-    if (msg.type === 'loginAuthResp') {
-        if(msg.data.auth){
-            if (typeof videoVm !== 'undefined'){
-                videoVm.isAuth=true;
-                videoVm.errorMessage="";
-            }
-            initWebRTC();
-        }else{
-            if (typeof videoVm !== 'undefined'){
-                videoVm.errorMessage=getLang('loginErrMsg');
-            }
-        }
-    }
-};
-
+    };
+}
 function login() {
     let authInfo= getToken();
     let maxSize=screen.width>screen.height?screen.width:screen.height;
@@ -97,7 +98,19 @@ function initWebRTC() {
     pc.addTransceiver('video');
     pc.addTransceiver('audio');
 
-    pc.oniceconnectionstatechange = () => log(pc.iceConnectionState);
+    pc.oniceconnectionstatechange = function () {
+        log(pc.iceConnectionState);
+        iceConnectionState=pc.iceConnectionState;
+        if(pc.iceConnectionState=='disconnected'){
+            setTimeout(() => {
+                    if(this.remoteVideo!=null&&!this.remoteVideo.paused){
+                        if(iceConnectionState=='disconnected'){
+                           connectWs();
+                        }
+                    }
+            }, 60);   
+        }
+    }
     pc.ontrack = function (event) {
         if (event.track.kind === 'video') {
                 console.log('收到视频轨道');
@@ -160,7 +173,7 @@ function checkDevice() {
     return isMobileUA || isTablet ? "mobile" : "desktop";
 }
 
- function getToken(){
+function getToken(){
    let  password=localStorage.getItem('password')||'';
    const timestamp = Date.now();
    let src=securityKey+"|"+timestamp+"|"+password;
@@ -171,4 +184,4 @@ function checkDevice() {
     };
 }
 
-
+connectWs();

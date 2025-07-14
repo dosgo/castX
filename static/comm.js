@@ -95,6 +95,11 @@ function initWebRTC() {
         enableRtpDataChannels: true,
         // 调整jitter buffer的隐藏参数（非标准但有效）
        // encodedInsertableStreams: true 
+        fieldTrials: {
+        'WebRTC-Bwe-AlrLimitedBackoff/Enabled': true,
+        'WebRTC-ZeroPlayoutDelay/Enabled': true,
+        'WebRTC-LowLatencyRenderer/Enabled': true
+      },
       });
     pc.addTransceiver('video');
     pc.addTransceiver('audio');

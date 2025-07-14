@@ -1,4 +1,4 @@
-package wsClient
+package castxClient
 
 import (
 	"crypto/sha256"

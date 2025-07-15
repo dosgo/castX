@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/pion/webrtc/v4"
+	"github.com/pion/webrtc/v4/pkg/media/h264writer"
 )
 
 func (client *CastXClient) initWebRtc() error {
@@ -35,19 +35,19 @@ func (client *CastXClient) initWebRtc() error {
 		fmt.Printf("开始接收轨道: %s\n", track.Codec().MimeType)
 
 		if track.Codec().MimeType == "video/H264" {
-			client.addSDPFromTrack(track)
+			h264writer := h264writer.NewWith(client.Stream)
 			go func() {
 				for {
 					rtpPacket, _, err := track.ReadRTP()
 					if err != nil {
 						break
 					}
-					client.sendRtp(rtpPacket)
+					h264writer.WriteRTP(rtpPacket)
 				}
 			}()
 		}
 		if track.Codec().MimeType == "audio/opus" {
-			client.addSDPFromTrack(track)
+
 		}
 
 	})
@@ -82,38 +82,4 @@ func (client *CastXClient) SetRemoteDescription(data map[string]interface{}) {
 	if err := client.peerConnection.SetRemoteDescription(answer); err != nil {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 	}
-}
-
-func (client *CastXClient) addSDPFromTrack(track *webrtc.TrackRemote) {
-	// 构建基本 SDP
-	if client.sdp == "" {
-		client.sdp = "v=0\n"
-		client.sdp += "o=- 0 0 IN IP4 127.0.0.1\n"
-		client.sdp += "s=TrackRemote Generated SDP\n"
-		client.sdp += "c=IN IP4 127.0.0.1\n"
-		client.sdp += "t=0 0\n"
-	}
-
-	// 媒体类型
-	if track != nil {
-		mediaType := "video"
-		if track.Kind() == webrtc.RTPCodecTypeAudio {
-			mediaType = "audio"
-		}
-		codec := track.Codec()
-		var port int
-		if mediaType == "video" {
-			port = client.videoPort
-		} else {
-			port = client.audioPort
-		}
-		// 媒体描述
-		client.sdp += fmt.Sprintf("m=%s %d RTP/AVP %d\n", mediaType, port, codec.PayloadType)
-		mimeTypeInfo := strings.Split(codec.MimeType, "/")
-		client.sdp += fmt.Sprintf("a=rtpmap:%d %s/%d\n", codec.PayloadType, strings.ToUpper(mimeTypeInfo[1]), codec.ClockRate)
-	}
-}
-func (client *CastXClient) GetRtpSdp() string {
-	return strings.Trim(client.sdp, "\n")
-
 }

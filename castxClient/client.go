@@ -6,12 +6,15 @@ import (
 
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
+	"golang.org/x/exp/rand"
 )
 
 type CastXClient struct {
 	wsClient       *WsClient
 	peerConnection *webrtc.PeerConnection
 	rtpSendConn    *net.UDPConn
+	videoPort      int
+	audioPort      int
 	sdp            string
 }
 
@@ -29,7 +32,14 @@ func (client *CastXClient) Start(wsUrl string, password string, maxSize int) int
 		client.SetRemoteDescription(data)
 	})
 	client.wsClient.Conect(wsUrl, password, maxSize)
-
+	//port, _ := GetFreeUDPPort()
+	port := rand.Intn(65533-1000+1) + 1000
+	if client.audioPort == 0 {
+		client.audioPort = port
+	}
+	if client.videoPort == 0 {
+		client.videoPort = port + 2
+	}
 	return 0
 }
 
@@ -37,7 +47,7 @@ func (client *CastXClient) sendRtp(rtpPacket *rtp.Packet) error {
 
 	var err error
 	if client.rtpSendConn == nil {
-		targetAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4002")
+		targetAddr, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", client.videoPort))
 		client.rtpSendConn, err = net.DialUDP("udp", nil, targetAddr)
 		if err != nil {
 			fmt.Println("连接失败:", err)

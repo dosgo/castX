@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/pion/webrtc/v4"
@@ -102,7 +101,12 @@ func (client *CastXClient) addSDPFromTrack(track *webrtc.TrackRemote) {
 			mediaType = "audio"
 		}
 		codec := track.Codec()
-		port, _ := GetFreeUDPPort()
+		var port int
+		if mediaType == "video" {
+			port = client.videoPort
+		} else {
+			port = client.audioPort
+		}
 		// 媒体描述
 		client.sdp += fmt.Sprintf("m=%s %d RTP/AVP %d\n", mediaType, port, codec.PayloadType)
 		mimeTypeInfo := strings.Split(codec.MimeType, "/")
@@ -112,17 +116,4 @@ func (client *CastXClient) addSDPFromTrack(track *webrtc.TrackRemote) {
 func (client *CastXClient) GetRtpSdp() string {
 	return strings.Trim(client.sdp, "\n")
 
-}
-func GetFreeUDPPort() (int, error) {
-	addr, err := net.ResolveUDPAddr("udp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer conn.Close()
-	return conn.LocalAddr().(*net.UDPAddr).Port, nil
 }

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/dosgo/castX/castxClient"
-	"github.com/faiface/pixel"
-	"github.com/faiface/pixel/pixelgl"
+	"github.com/gopxl/pixel"
+	"github.com/gopxl/pixel/pixelgl"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"golang.org/x/image/colornames"
 )

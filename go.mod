@@ -3,34 +3,30 @@ module github.com/dosgo/castX
 go 1.24.0
 
 require (
-	github.com/bluenviron/gortsplib/v4 v4.12.1
 	github.com/dosgo/libadb v1.3.3
-	github.com/faiface/pixel v0.10.0
 	github.com/go-vgo/robotgo v0.110.7
+	github.com/gopxl/pixel v1.0.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
-	github.com/pion/rtp v1.8.20
 	github.com/pion/webrtc/v4 v4.1.3
 	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/wlynxg/anet v0.0.5
-	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f
 	golang.org/x/image v0.26.0
 	golang.org/x/mobile v0.0.0-20250408133729-978277e7eaf7
 )
 
 require (
 	github.com/aws/aws-sdk-go v1.38.20 // indirect
-	github.com/bluenviron/mediacommon v1.13.3 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/dblohm7/wingoes v0.0.0-20240820181039-f2b84150679e // indirect
 	github.com/dosgo/spake2-go v0.0.0-20241019170010-3b8be66d26f7 // indirect
 	github.com/ebitengine/purego v0.8.2 // indirect
-	github.com/faiface/glhf v0.0.0-20181018222622-82a6317ac380 // indirect
+	github.com/faiface/glhf v0.0.0-20211013000516-57b20770c369 // indirect
 	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3 // indirect
 	github.com/gen2brain/shm v0.1.1 // indirect
-	github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7 // indirect
-	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72 // indirect
-	github.com/go-gl/mathgl v0.0.0-20190416160123-c4601bc793c7 // indirect
+	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6 // indirect
+	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b // indirect
+	github.com/go-gl/mathgl v1.1.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -50,6 +46,7 @@ require (
 	github.com/pion/mdns/v2 v2.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.15 // indirect
+	github.com/pion/rtp v1.8.20 // indirect
 	github.com/pion/sctp v1.8.39 // indirect
 	github.com/pion/sdp/v3 v3.0.14 // indirect
 	github.com/pion/srtp/v3 v3.0.6 // indirect
@@ -71,6 +68,7 @@ require (
 	github.com/vcaesar/tt v0.20.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect

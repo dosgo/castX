@@ -35,7 +35,7 @@ func (client *CastXClient) initWebRtc() error {
 		fmt.Printf("开始接收轨道: %s\n", track.Codec().MimeType)
 
 		if track.Codec().MimeType == "video/H264" {
-			h264writer := h264writer.NewWith(client.Stream)
+			h264writer := h264writer.NewWith(client.stream)
 			go func() {
 				for {
 					rtpPacket, _, err := track.ReadRTP()
@@ -70,7 +70,7 @@ func (client *CastXClient) CreateOffer() error {
 
 	offerJSON, _ := json.Marshal(*client.peerConnection.LocalDescription())
 	// 发送Offer到信令服务
-	client.wsClient.SendOffer(string(offerJSON))
+	client.WsClient.SendOffer(string(offerJSON))
 	return nil
 }
 

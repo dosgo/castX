@@ -6,7 +6,9 @@ import (
 	"image/color"
 	"io"
 	"log"
+	"math/rand"
 	"net"
+	"os/exec"
 	"sync"
 	"time"
 
@@ -23,20 +25,26 @@ type VideoFrame struct {
 }
 
 type H264Player struct {
-	frameChan chan *VideoFrame
-	framerate float64
-	width     int
-	height    int
-	running   bool
-	ready     bool
-	wg        sync.WaitGroup
+	frameChan   chan *VideoFrame
+	framerate   float64
+	width       int
+	height      int
+	running     bool
+	ready       bool
+	videoFfmpeg *exec.Cmd
+	inputPort   int
+	outputPort  int
+	ffmpegOut   io.ReadCloser
 }
 
-func NewH264Player(inputPort int) (*H264Player, error) {
+func NewH264Player(inputPort int, outputPort int) (*H264Player, error) {
 	player := &H264Player{
-		frameChan: make(chan *VideoFrame, 30), // 缓冲30帧
-		running:   true,
-		ready:     false,
+		frameChan:  make(chan *VideoFrame, 3), // 缓冲30帧
+		running:    true,
+		ready:      false,
+		inputPort:  inputPort,
+		outputPort: outputPort,
+		ffmpegOut:  &FFmpegStrem{port: outputPort},
 	}
 
 	if player.width == 0 || player.height == 0 {
@@ -49,7 +57,6 @@ func NewH264Player(inputPort int) (*H264Player, error) {
 	log.Printf("视频信息: %dx%d @ %.2f fps, 时长: %v",
 		player.width, player.height, player.framerate)
 
-	player.wg.Add(1)
 	go player.decodeRoutine(inputPort)
 	return player, nil
 }
@@ -60,60 +67,51 @@ func (p *H264Player) SetParam(width int, height int, framerate float64) {
 	p.framerate = framerate
 	p.ready = true
 }
-func (p *H264Player) decodeRoutine(inputPort int) {
-	defer p.wg.Done()
-	defer close(p.frameChan)
 
-	reader, writer := io.Pipe()
-	videoOutput := ffmpeg.Input(fmt.Sprintf("tcp://127.0.0.1:%d?listen", inputPort),
-		ffmpeg.KwArgs{}).
-		Output("pipe:1", // 输出到标准输出
+func (p *H264Player) startNewFFmpeg() {
+	// 创建全新的Cmd实例
+	p.videoFfmpeg = ffmpeg.Input(fmt.Sprintf("tcp://127.0.0.1:%d?listen", p.inputPort),
+		ffmpeg.KwArgs{"f": "h264"}).
+		Output(fmt.Sprintf("tcp://127.0.0.1:%d?listen", p.outputPort), // 输出到标准输出
 			ffmpeg.KwArgs{
-				"format":  "rawvideo",
-				"pix_fmt": "rgb24",
-			}).WithOutput(writer)
-	go videoOutput.Run()
+				"format":    "rawvideo",
+				"pix_fmt":   "rgba",
+				"flags":     "low_delay",
+				"avioflags": "direct",
+			}).Compile() //.ErrorToStdOut()
+	// 启动进程
+	if err := p.videoFfmpeg.Start(); err != nil {
+		log.Printf("启动FFmpeg失败: %v", err)
+		return
+	}
+}
 
-	fmt.Printf("decodeRoutine11\r\n")
-	time.Sleep(time.Second * 5)
+func (p *H264Player) decodeRoutine(inputPort int) {
+	defer close(p.frameChan)
+	//	frameSize := p.width * p.height * 4 // RGBA 每像素3字节
+	frameBuffer := make([]byte, 2400*1080*4)
 
-	//	frameSize := p.width * p.height * 3 // RGB24 每像素3字节
-	frameBuffer := make([]byte, 2400*1080*3)
-
+	var newFrameSize int = 0
 	for p.running {
 
-		if !p.ready {
+		if !p.ready || p.ffmpegOut == nil {
 			time.Sleep(time.Millisecond * 5)
+			fmt.Printf("decodeRoutine p.ready:%+v\r\n", p.ready)
 			continue
 		}
-		newFrameSize := p.width * p.height * 3
-		_, err := io.ReadFull(reader, frameBuffer[:newFrameSize])
-
+		if newFrameSize != p.width*p.height*4 {
+			fmt.Printf("newFrameSize:%d new:%d\r\n", newFrameSize, p.width*p.height*4)
+		}
+		newFrameSize = p.width * p.height * 4
+		_, err := io.ReadFull(p.ffmpegOut, frameBuffer[:newFrameSize])
 		//if err != nil || n != frameSize {
 		if err != nil {
 			break // 视频结束或错误
 		}
-		fmt.Printf("newFrameSize:%d\r\n", newFrameSize)
 
 		// 创建RGBA图像
 		img := image.NewRGBA(image.Rect(0, 0, p.width, p.height))
-		for y := 0; y < p.height; y++ {
-			for x := 0; x < p.width; x++ {
-				srcIdx := (y*p.width + x) * 3
-				/*
-					img.SetRGBA(x, p.height-1-y, toRGBA( // 需要垂直翻转
-						frameBuffer[srcIdx],
-						frameBuffer[srcIdx+1],
-						frameBuffer[srcIdx+2],
-					))*/
-
-				img.SetRGBA(x, y, toRGBA( // 需要垂直翻转
-					frameBuffer[srcIdx],
-					frameBuffer[srcIdx+1],
-					frameBuffer[srcIdx+2],
-				))
-			}
-		}
+		copy(img.Pix, frameBuffer[:newFrameSize]) // 直接使用FFmpeg输出的RGBA数据
 
 		// 发送帧
 		select {
@@ -126,13 +124,17 @@ func (p *H264Player) decodeRoutine(inputPort int) {
 	}
 }
 
-func toRGBA(r, g, b byte) color.RGBA {
-	return color.RGBA{r, g, b, 255}
-}
-
 func (p *H264Player) Close() {
 	p.running = false
-	p.wg.Wait()
+}
+
+/*重置解码器*/
+func (p *H264Player) RebootFfmpeg() {
+	if p.videoFfmpeg != nil {
+		p.videoFfmpeg.Process.Kill()
+	}
+	time.Sleep(time.Millisecond * 500)
+	go p.startNewFFmpeg()
 }
 
 func runPlayer() {
@@ -209,38 +211,114 @@ func runPlayer() {
 	}
 }
 
-var inputPort int
-var outputStream io.WriteCloser
 var player *H264Player
 
 func main() {
-	inputPort = 9635
-	go func() {
-		time.Sleep(time.Second * 5)
-		castxClient := castxClient.NewCastXClient()
-		conn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", inputPort)))
-		if err != nil {
-			fmt.Printf("视频接收失败: %v\n", err)
-			return
-		}
-		castxClient.SetStream(conn)
-		castxClient.WsClient.SetInfoNotifyFun(func(data map[string]interface{}) {
-			fmt.Printf("info  data:%+v\r\n", data)
-			if _height, ok := data["videoHeight"].(float64); ok {
-				castxClient.Height = int(_height)
-			}
-			if _width, ok := data["videoWidth"].(float64); ok {
-				castxClient.Width = int(_width)
-			}
-			player.SetParam(castxClient.Width, castxClient.Height, 30)
-		})
-		castxClient.Start("ws://172.30.17.78:8081/ws", "666666", 1920)
-	}()
+	inputPort := 9635
+	outputPort := 9636
 	var err error
-	player, err = NewH264Player(inputPort)
+	player, err = NewH264Player(inputPort, outputPort)
 	if err != nil {
 		log.Fatal(err)
 	}
+	castxClient := castxClient.NewCastXClient()
+	castxClient.SetStream(&FFmpegStrem{port: inputPort})
+	castxClient.WsClient.SetInfoNotifyFun(func(data map[string]interface{}) {
+		fmt.Printf("info  data:%+v\r\n", data)
+		if _height, ok := data["videoHeight"].(float64); ok {
+			castxClient.Height = int(_height)
+		}
+		if _width, ok := data["videoWidth"].(float64); ok {
+			castxClient.Width = int(_width)
+		}
+		if player != nil {
+			player.SetParam(castxClient.Width, castxClient.Height, 30)
+			//go player.RebootFfmpeg()
+		}
+	})
+	castxClient.Start("ws://172.30.17.78:8081/ws", "666666", 1920)
+
 	pixelgl.Run(runPlayer)
 	fmt.Scanln()
+}
+func randomInt(min, max int) int {
+	return min + rand.Intn(max-min+1)
+}
+
+type FFmpegStrem struct {
+	conn          net.Conn
+	port          int
+	reconnectLock sync.Mutex
+	reconnecting  bool
+}
+
+func (s *FFmpegStrem) startReconnect() {
+	s.reconnectLock.Lock()
+	defer s.reconnectLock.Unlock()
+	// 如果已经在重连中，直接返回
+	if s.reconnecting {
+		return
+	}
+	// 标记为重连中
+	s.reconnecting = true
+	// 启动异步重连
+	go s.reconect()
+}
+
+// Read 实现 io.Reader 接口
+func (r *FFmpegStrem) Read(p []byte) (n int, err error) {
+	if r.conn == nil {
+		r.startReconnect()
+	} else {
+		r.conn.SetReadDeadline(time.Now().Add(time.Second * 1))
+		n, err = r.conn.Read(p)
+		if err != nil {
+			fmt.Printf("read err:%+v\r\n", err)
+			r.Close()
+		}
+	}
+	return n, err
+}
+
+// Write 实现 io.Writer 接口
+func (r *FFmpegStrem) Write(p []byte) (n int, err error) {
+	if r.conn == nil {
+		//fmt.Printf("reconect :%d\r\n", r.port)
+		r.startReconnect()
+	} else {
+		r.conn.SetWriteDeadline(time.Now().Add(time.Second * 1))
+		n, err = r.conn.Write(p)
+		if err != nil {
+			fmt.Printf("Write err:%+v\r\n", err)
+			r.Close()
+		}
+	}
+	return n, err
+}
+
+func (s *FFmpegStrem) reconect() {
+	defer func() {
+		s.reconnectLock.Lock()
+		s.reconnecting = false
+		s.reconnectLock.Unlock()
+	}()
+	fmt.Printf("reconect port:%d\r\n", s.port)
+	time.Sleep(time.Millisecond * 1000)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", s.port)), time.Second*5)
+	if err == nil {
+		s.conn = conn
+	} else {
+		fmt.Printf("reconect err:%+v\r\n", err)
+	}
+}
+
+// Close 实现 io.Closer 接口
+func (r *FFmpegStrem) Close() error {
+	defer func() {
+		r.conn = nil
+	}()
+	if r.conn != nil {
+		return r.conn.Close()
+	}
+	return nil
 }

@@ -77,7 +77,6 @@ func (m *FfmpegIo) handler(conn net.Conn, isIn bool) {
 			case <-time.After(time.Millisecond * 500):
 				fmt.Println("outputDataChan timeout")
 			}
-			m.outputDataChan <- data
 		}
 	}
 }

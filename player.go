@@ -294,7 +294,7 @@ func main() {
 			go player.RebootFfmpeg()
 		}
 	})
-	client.Start("ws://172.30.17.78:8081/ws", "666666", 1920)
+	client.Start("ws://192.168.221.147:8081/ws", "666666", 1920)
 	pixelgl.Run(runPlayer)
 	fmt.Scanln()
 }

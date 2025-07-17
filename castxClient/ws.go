@@ -109,8 +109,10 @@ func (client *WsClient) SetInfoNotifyFun(_infoNotifyCall func(map[string]interfa
 }
 
 func (client *WsClient) SendCmd(cmd string, args string) {
-	client.wsConn.WriteJSON(comm.WSMessage{
-		Type: cmd,
-		Data: args,
-	})
+	if client.wsConn != nil {
+		client.wsConn.WriteJSON(comm.WSMessage{
+			Type: cmd,
+			Data: args,
+		})
+	}
 }

@@ -52,11 +52,13 @@ func (m *FfmpegIo) acceptIo(listener net.Listener, isIn bool) {
 }
 func (m *FfmpegIo) handler(conn net.Conn, isIn bool) {
 	var buffer []byte
+	//var data []byte
 	defer conn.Close()
 	if isIn {
 		buffer = make([]byte, 1024*1024)
 	} else {
 		buffer = make([]byte, 1024*1024*10)
+		//data = make([]byte, 1024*1024*10)
 	}
 	for m.running {
 		if isIn {
@@ -70,10 +72,9 @@ func (m *FfmpegIo) handler(conn net.Conn, isIn bool) {
 				break
 			}
 			// 为了避免数据竞争，我们复制数据并发送到通道
-			data := make([]byte, n)
-			copy(data, buffer[:n])
+			//copy(data, buffer[:n])
 			select {
-			case m.outputDataChan <- data:
+			case m.outputDataChan <- buffer[:n]:
 			case <-time.After(time.Millisecond * 500):
 				fmt.Println("outputDataChan timeout")
 			}
@@ -107,7 +108,11 @@ func (ff *FfmpegIo) RecvOutput() ([]byte, error) {
 	}
 }
 func (ff *FfmpegIo) SetFrameSize(frameSize int) {
+	if ff.inputConn != nil {
+		ff.inputConn.Close()
+	}
 	ff.frameSize = frameSize
+
 }
 func (m *FfmpegIo) Stop() {
 	m.input.Close()

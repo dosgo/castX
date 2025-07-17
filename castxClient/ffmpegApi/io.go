@@ -72,6 +72,11 @@ func (m *FfmpegIo) handler(conn net.Conn, isIn bool) {
 			// 为了避免数据竞争，我们复制数据并发送到通道
 			data := make([]byte, n)
 			copy(data, buffer[:n])
+			select {
+			case m.outputDataChan <- data:
+			case <-time.After(time.Millisecond * 500):
+				fmt.Println("outputDataChan timeout")
+			}
 			m.outputDataChan <- data
 		}
 	}

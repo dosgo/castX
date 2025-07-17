@@ -12,6 +12,7 @@ import (
 	"github.com/dosgo/castX/castxClient/ffmpegapi"
 	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
+	"github.com/kbinani/screenshot"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 
 	"golang.org/x/image/colornames"
@@ -49,10 +50,8 @@ func NewH264Player(ffmpegIo *ffmpegapi.FfmpegIo) (*H264Player, error) {
 	if player.framerate == 0 {
 		player.framerate = 25.0
 	}
-
 	log.Printf("视频信息: %dx%d @ %.2f fps, 时长: %v",
 		player.width, player.height, player.framerate)
-
 	go player.decodeRoutine()
 	return player, nil
 }
@@ -68,6 +67,7 @@ func (p *H264Player) startNewFFmpeg() {
 	// 创建全新的Cmd实例
 	p.videoFfmpeg = ffmpeg.Input(fmt.Sprintf("tcp://127.0.0.1:%d", p.inputPort),
 		ffmpeg.KwArgs{"f": "h264"}).
+		Filter("scale", ffmpeg.Args{fmt.Sprintf("%d:%d", p.width, p.height)}).
 		Output(fmt.Sprintf("tcp://127.0.0.1:%d", p.outputPort), // 输出到标准输出
 			ffmpeg.KwArgs{
 				"format":    "rawvideo",
@@ -209,7 +209,23 @@ func main() {
 			castxClient.Width = int(_width)
 		}
 		if player != nil {
-			player.SetParam(castxClient.Width, castxClient.Height, 30)
+
+			width := castxClient.Width
+			height := castxClient.Height
+			bounds := screenshot.GetDisplayBounds(0)
+			//宽度超宽
+			if width > bounds.Dx() {
+				fmt.Printf("eeee\r\n")
+				height = int(float64(bounds.Dx()) / float64(width) * float64(height))
+				width = bounds.Dx()
+			}
+			//宽度超宽
+			if height > bounds.Dy() {
+				width = int(float64(bounds.Dy()) / float64(height) * float64(width))
+				height = bounds.Dy()
+			}
+
+			player.SetParam(width, height, 30)
 			go player.RebootFfmpeg()
 		}
 	})

@@ -1,15 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
 	"log"
+	"math"
 	"os/exec"
 	"time"
 
 	"github.com/dosgo/castX/castxClient"
 	"github.com/dosgo/castX/castxClient/ffmpegapi"
+	"github.com/dosgo/castX/comm"
 	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
 	"github.com/kbinani/screenshot"
@@ -18,13 +21,7 @@ import (
 	"golang.org/x/image/colornames"
 )
 
-type VideoFrame struct {
-	Image *image.RGBA
-	Time  time.Duration
-}
-
 type H264Player struct {
-	frameChan   chan *VideoFrame
 	framerate   float64
 	width       int
 	height      int
@@ -37,10 +34,9 @@ type H264Player struct {
 
 func NewH264Player(ffmpegIo *ffmpegapi.FfmpegIo) (*H264Player, error) {
 	player := &H264Player{
-		frameChan:  make(chan *VideoFrame, 3), // 缓冲30帧
-		running:    true,
 		inputPort:  ffmpegIo.GetPort(true),
 		outputPort: ffmpegIo.GetPort(false),
+		running:    true,
 		ffmpegIo:   ffmpegIo,
 	}
 
@@ -52,7 +48,6 @@ func NewH264Player(ffmpegIo *ffmpegapi.FfmpegIo) (*H264Player, error) {
 	}
 	log.Printf("视频信息: %dx%d @ %.2f fps, 时长: %v",
 		player.width, player.height, player.framerate)
-	go player.decodeRoutine()
 	return player, nil
 }
 
@@ -82,24 +77,17 @@ func (p *H264Player) startNewFFmpeg() {
 	}
 }
 
-func (p *H264Player) decodeRoutine() {
-	defer close(p.frameChan)
-	for p.running {
-		frameBuffer, err := p.ffmpegIo.RecvOutput()
-		if err != nil {
-			continue
-		}
-		// 创建RGBA图像
-		img := image.NewRGBA(image.Rect(0, 0, p.width, p.height))
-		img.Pix = frameBuffer // 直接使用FFmpeg输出的RGBA数据
-		// 发送帧
-		select {
-		case p.frameChan <- &VideoFrame{Image: img}:
-			// 正常发送
-		default:
-			// 通道满，丢弃帧
-		}
+func (p *H264Player) GetFrame() *image.RGBA {
+	if !p.running {
+		return nil
 	}
+	frameBuffer, err := p.ffmpegIo.RecvOutput()
+	if err != nil || len(frameBuffer) < p.width*p.height*4 {
+		return nil
+	}
+	img := image.NewRGBA(image.Rect(0, 0, p.width, p.height))
+	img.Pix = frameBuffer
+	return img
 }
 
 func (p *H264Player) Close() {
@@ -136,7 +124,86 @@ func runPlayer() {
 		Rect:   pixel.R(0, 0, float64(width), float64(height)),
 	}
 
+	var isTouching bool
+	var touchStartPos pixel.Vec
+	var currentTouchPos pixel.Vec
+
 	for !win.Closed() {
+
+		//按下
+		if win.JustPressed(pixelgl.MouseButtonLeft) {
+			// 获取当前鼠标位置（转换为画布坐标）
+			mousePos := win.MousePosition()
+			canvasCenter := win.Bounds().Center()
+			currentTouchPos = mousePos.Sub(canvasCenter).Add(canvas.Bounds().Center())
+
+			// 触摸开始
+			isTouching = true
+			touchStartPos = currentTouchPos
+			fmt.Printf("onTouchDown: X=%.0f, Y=%.0f\n", currentTouchPos.X, canvas.Bounds().H()-currentTouchPos.Y)
+
+			if client != nil {
+				args := map[string]interface{}{
+					"x":           currentTouchPos.X,
+					"y":           canvas.Bounds().H() - currentTouchPos.Y,
+					"type":        "panstart",
+					"duration":    0,
+					"videoWidth":  player.width,
+					"videoHeight": player.height,
+				}
+				argsStr, _ := json.Marshal(args)
+				client.WsClient.SendCmd(comm.MsgTypeControl, string(argsStr))
+			}
+		}
+		//弹起
+		if win.JustReleased(pixelgl.MouseButtonLeft) {
+
+			isTouching = false
+			// 获取抬起时的位置
+			mousePos := win.MousePosition()
+			canvasCenter := win.Bounds().Center()
+			currentTouchPos = mousePos.Sub(canvasCenter).Add(canvas.Bounds().Center())
+			fmt.Printf("onTouchUp: X=%.0f, Y=%.0f\n", currentTouchPos.X, canvas.Bounds().H()-currentTouchPos.Y)
+			var _type = "panend"
+			var duration = 0
+			var touchNum float64 = 0
+			if math.Abs(currentTouchPos.X-touchStartPos.X) < touchNum && math.Abs(currentTouchPos.Y-touchStartPos.Y) < touchNum {
+				_type = "click"
+				duration = 15
+			}
+			if client != nil {
+				args := map[string]interface{}{
+					"x":           currentTouchPos.X,
+					"y":           canvas.Bounds().H() - currentTouchPos.Y,
+					"type":        _type,
+					"duration":    duration,
+					"videoWidth":  player.width,
+					"videoHeight": player.height,
+				}
+				argsStr, _ := json.Marshal(args)
+				client.WsClient.SendCmd(comm.MsgTypeControl, string(argsStr))
+			}
+		}
+		//移动
+		if isTouching {
+			// 即使没有抬起，也可能在移动
+			mousePos := win.MousePosition()
+			canvasCenter := win.Bounds().Center()
+			currentTouchPos = mousePos.Sub(canvasCenter).Add(canvas.Bounds().Center())
+			if client != nil {
+				args := map[string]interface{}{
+					"x":           currentTouchPos.X,
+					"y":           canvas.Bounds().H() - currentTouchPos.Y,
+					"type":        "pan",
+					"duration":    0,
+					"videoWidth":  player.width,
+					"videoHeight": player.height,
+				}
+				argsStr, _ := json.Marshal(args)
+				client.WsClient.SendCmd(comm.MsgTypeControl, string(argsStr))
+			}
+		}
+
 		// 检查是否需要更新窗口大小
 		if (player.width > 0 && player.height > 0) &&
 			(player.width != width || player.height != height) {
@@ -152,13 +219,9 @@ func runPlayer() {
 
 		// 根据帧率更新帧
 
-		select {
-		case frame := <-player.frameChan:
-			if frame != nil {
-				lastFrame = pixel.PictureDataFromImage(frame.Image)
-			}
-		default:
-			// 没有新帧，保留上一帧
+		frame := player.GetFrame()
+		if frame != nil {
+			lastFrame = pixel.PictureDataFromImage(frame)
 		}
 
 		// 渲染
@@ -190,6 +253,7 @@ func runPlayer() {
 }
 
 var player *H264Player
+var client *castxClient.CastXClient
 
 func main() {
 	videoffmpegIo := ffmpegapi.NewFfmpegIo()
@@ -198,20 +262,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	castxClient := castxClient.NewCastXClient()
-	castxClient.SetStream(videoffmpegIo)
-	castxClient.WsClient.SetInfoNotifyFun(func(data map[string]interface{}) {
+	client = castxClient.NewCastXClient()
+	client.SetStream(videoffmpegIo)
+	client.WsClient.SetInfoNotifyFun(func(data map[string]interface{}) {
 		fmt.Printf("info  data:%+v\r\n", data)
 		if _height, ok := data["videoHeight"].(float64); ok {
-			castxClient.Height = int(_height)
+			client.Height = int(_height)
 		}
 		if _width, ok := data["videoWidth"].(float64); ok {
-			castxClient.Width = int(_width)
+			client.Width = int(_width)
 		}
 		if player != nil {
 
-			width := castxClient.Width
-			height := castxClient.Height
+			width := client.Width
+			height := client.Height
 			bounds := screenshot.GetDisplayBounds(0)
 			//宽度超宽
 			if width > bounds.Dx() {
@@ -221,15 +285,16 @@ func main() {
 			}
 			//宽度超宽
 			if height > bounds.Dy() {
-				width = int(float64(bounds.Dy()) / float64(height) * float64(width))
-				height = bounds.Dy()
+				dy := bounds.Dy() - 33*2 //窗口状态栏+底部状态栏
+				width = int(float64(dy) / float64(height) * float64(width))
+				height = dy
 			}
 
 			player.SetParam(width, height, 30)
 			go player.RebootFfmpeg()
 		}
 	})
-	castxClient.Start("ws://172.30.17.78:8081/ws", "666666", 1920)
+	client.Start("ws://172.30.17.78:8081/ws", "666666", 1920)
 	pixelgl.Run(runPlayer)
 	fmt.Scanln()
 }

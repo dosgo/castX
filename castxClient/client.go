@@ -10,7 +10,7 @@ import (
 type CastXClient struct {
 	WsClient       *WsClient
 	peerConnection *webrtc.PeerConnection
-	stream         io.WriteCloser
+	stream         io.Writer
 	Width          int
 	Height         int
 }
@@ -20,7 +20,7 @@ func NewCastXClient() *CastXClient {
 	client.WsClient = &WsClient{}
 	return client
 }
-func (client *CastXClient) SetStream(stream io.WriteCloser) {
+func (client *CastXClient) SetStream(stream io.Writer) {
 	client.stream = stream
 }
 func (client *CastXClient) Start(wsUrl string, password string, maxSize int) int {

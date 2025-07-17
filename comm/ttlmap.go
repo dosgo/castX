@@ -6,21 +6,39 @@ import (
 )
 
 type ttlMap struct {
-	tokenInfo map[string]interface{}
+	valueInfo map[string]int
 	keyTime   map[string]int64
 	mu        sync.RWMutex // 读写锁
 	ttl       int64
 	run       bool
 }
 
-func (ttlmap *ttlMap) Add(token string, value interface{}) {
+func (ttlmap *ttlMap) Store(key string, value int) {
 	ttlmap.mu.Lock()
 	defer ttlmap.mu.Unlock()
-	ttlmap.tokenInfo[token] = value
-	ttlmap.keyTime[token] = time.Now().UnixMilli()
+	ttlmap.valueInfo[key] = value
+	ttlmap.keyTime[key] = time.Now().UnixMilli()
 }
-func (ttlmap *ttlMap) IsExists(token string) bool {
-	if _, exists := ttlmap.tokenInfo[token]; exists {
+func (ttlmap *ttlMap) Incr(key string, num int) int {
+	ttlmap.mu.Lock()
+	defer ttlmap.mu.Unlock()
+	var value = 0
+	if _value, exists := ttlmap.valueInfo[key]; exists {
+		value = _value
+	}
+	ttlmap.valueInfo[key] = value + num
+	ttlmap.keyTime[key] = time.Now().UnixMilli()
+	return ttlmap.valueInfo[key]
+}
+func (ttlmap *ttlMap) Get(key string) int {
+	if _value, exists := ttlmap.valueInfo[key]; exists {
+		return _value
+	}
+	return 0
+}
+
+func (ttlmap *ttlMap) IsExists(key string) bool {
+	if _, exists := ttlmap.valueInfo[key]; exists {
 		return true
 	}
 	return false
@@ -28,7 +46,7 @@ func (ttlmap *ttlMap) IsExists(token string) bool {
 
 func NewTTLMap(ttl int64) *ttlMap {
 	m := &ttlMap{
-		tokenInfo: make(map[string]interface{}),
+		valueInfo: make(map[string]int),
 		keyTime:   make(map[string]int64),
 		ttl:       ttl,
 		run:       true,
@@ -47,9 +65,9 @@ func (m *ttlMap) cleanupExpired() {
 	now := time.Now().UnixMilli()
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for key, _ := range m.tokenInfo {
+	for key, _ := range m.valueInfo {
 		if now > m.keyTime[key]+m.ttl {
-			delete(m.tokenInfo, key)
+			delete(m.valueInfo, key)
 			delete(m.keyTime, key)
 		}
 	}

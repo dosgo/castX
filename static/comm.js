@@ -67,6 +67,7 @@ function connectWs() {
             }else{
                 if (typeof videoVm !== 'undefined'){
                     videoVm.errorMessage=getLang('loginErrMsg');
+                    videoVm.isAuth=false;
                 }
             }
         }
@@ -126,8 +127,7 @@ function autoReconect(){
         return;
     }
     autoIntervalId = setInterval(() => {
-        if(videoVm&&videoVm.isPlaying){
-            
+        if(videoVm&&videoVm.isPlaying&&videoVm.isAuth){
             if(remoteVideo!=null&&!remoteVideo.paused){
                 if(iceConnectionState=='disconnected'){
                     connectWs();

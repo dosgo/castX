@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -26,6 +27,7 @@ type WsServer struct {
 	config            *Config
 	auth              sync.Map
 	tokens            *ttlMap
+	loginNum          *ttlMap
 }
 
 var upgrader = websocket.Upgrader{
@@ -58,6 +60,7 @@ func NewWs(config *Config, webrtcServer *WebrtcServer) *WsServer {
 		connections: make(map[*WsSafeConn]bool),
 	}
 	wsServer.tokens = NewTTLMap(20)
+	wsServer.loginNum = NewTTLMap(3600)
 	return wsServer
 }
 
@@ -101,6 +104,7 @@ func (wsServer *WsServer) SendInitConfig(c *WsSafeConn) {
 }
 func (wsServer *WsServer) Shutdown() {
 	wsServer.tokens.Close()
+	wsServer.loginNum.Close()
 }
 func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if isPrivateIPv4(r.RemoteAddr) == false {
@@ -121,6 +125,7 @@ func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		}
 		return
 	}
+	remoteIP, _, _ := net.SplitHostPort(_conn.RemoteAddr().String())
 	conn := NewWsSafeConn(_conn)
 	wsServer.auth.Store(conn, false)
 	wsServer.connectionManager.Add(conn)
@@ -146,7 +151,7 @@ func (wsServer *WsServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 
 		switch msg.Type {
 		case MsgTypeLoginAuth:
-			wsServer.handleLogin(conn, msg.Data)
+			wsServer.handleLogin(conn, msg.Data, remoteIP)
 		//获取webrtc连接
 		case MsgTypeOffer:
 			go wsServer.handleOffer(conn, msg.Data)
@@ -210,7 +215,17 @@ func (wsServer *WsServer) handleControl(conn *WsSafeConn, data interface{}) {
 	})
 }
 
-func (wsServer *WsServer) handleLogin(conn *WsSafeConn, data interface{}) {
+func (wsServer *WsServer) handleLogin(conn *WsSafeConn, data interface{}, ip string) {
+	if wsServer.loginNum.Get(ip) > 20 {
+		conn.WriteJSON(WSMessage{
+			Type: MsgTypeLoginAuthResp,
+			Data: map[string]interface{}{
+				"auth": false,
+			},
+		})
+		conn.Close()
+		return
+	}
 	//解析参数
 	dataStr, ok := data.(string)
 	if !ok {
@@ -236,7 +251,7 @@ func (wsServer *WsServer) handleLogin(conn *WsSafeConn, data interface{}) {
 		//已经使用直接关闭
 		return
 	}
-	wsServer.tokens.Add(reqToken, 1)
+	wsServer.tokens.Store(reqToken, 1)
 	timestamp, ok := reqData["timestamp"].(float64)
 
 	var srcData = wsServer.config.SecurityKey + "|" + strconv.FormatInt(int64(timestamp), 10) + "|" + wsServer.config.Password
@@ -247,6 +262,8 @@ func (wsServer *WsServer) handleLogin(conn *WsSafeConn, data interface{}) {
 	if token == reqToken && math.Abs(timestamp-float64(time.Now().UnixMilli())) < 10*1000 {
 		wsServer.auth.Store(conn, true)
 		auth = true
+	} else {
+		wsServer.loginNum.Incr(ip, 1)
 	}
 
 	conn.WriteJSON(WSMessage{

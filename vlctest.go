@@ -4,12 +4,11 @@ import (
 	"fmt"
 
 	vlc "github.com/sunaipa5/libvlcPurego"
-	"golang.org/x/sys/windows"
 )
 
 func main() {
 	if err := vlc.Init(); err != nil {
-		panic(err)
+		fmt.Printf("err:%+vr\n", err)
 		return
 	}
 
@@ -41,35 +40,21 @@ func main() {
 	fmt.Println(eventid)
 
 	go func() {
-		<-vout
-		fmt.Println("Vout Event Recivet")
+		for {
+
+			<-vout
+			fmt.Println("Vout Event Recivet")
+		}
+		//<-vout
+		//fmt.Println("Vout Event Recivet")
 	}()
 
 	//windows: VLC (Direct3D11 output)
 	//Linux:  VLC media Test_player
-	closeChan := player.WindowCloseEvent("VLC media player")
-	<-closeChan
+	//	closeChan := player.WindowCloseEvent("VLC media player")
+	//	<-closeChan
 	fmt.Println("Player window closed")
-	player.Release()
-	fmt.Println("Player released")
-}
-func createNamedPipe(name string) (windows.Handle, error) {
-	// 转换字符串为 UTF16
-	namePtr, err := windows.UTF16PtrFromString(name)
-	if err != nil {
-		return 0, err
-	}
 
-	// 创建命名管道
-	pipe, err := windows.CreateNamedPipe(
-		namePtr,
-		windows.PIPE_ACCESS_OUTBOUND, // 输出管道
-		windows.PIPE_TYPE_BYTE|windows.PIPE_WAIT,
-		1,     // 只有一个实例
-		65536, // 输出缓冲区大小
-		65536, // 输入缓冲区大小
-		0,     // 默认超时时间
-		nil,   // 默认安全属性
-	)
-	return pipe, err
+	fmt.Println("Player released")
+	fmt.Scanln()
 }

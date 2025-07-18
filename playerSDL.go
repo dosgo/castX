@@ -43,7 +43,7 @@ func NewH264Player(ffmpegIo *ffmpegapi.FfmpegIo) (*H264Player, error) {
 	}
 
 	if player.width == 0 || player.height == 0 {
-		player.width, player.height = 1920, 764
+		player.width, player.height = 864, 1920
 	}
 	if player.framerate == 0 {
 		player.framerate = 25.0
@@ -172,7 +172,7 @@ func (s *SDLPlayer) Run() {
 					touchStartPos = sdl.Point{X: int32(event.Button().X), Y: int32(event.Button().Y)}
 					//currentTouchPos = touchStartPos
 					s.sendTouchEvent("panstart", int32(event.Button().X), int32(event.Button().Y))
-
+					fmt.Printf("x:%d y:%d\r\n", int32(event.Button().X), int32(event.Button().Y))
 				}
 			case sdl.EventMouseButtonUp:
 

@@ -112,7 +112,6 @@ func (ff *FfmpegIo) SetFrameSize(frameSize int) {
 		ff.inputConn.Close()
 	}
 	ff.frameSize = frameSize
-
 }
 func (m *FfmpegIo) Stop() {
 	m.input.Close()

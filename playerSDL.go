@@ -43,7 +43,7 @@ func NewH264Player(ffmpegIo *ffmpegapi.FfmpegIo) (*H264Player, error) {
 	}
 
 	if player.width == 0 || player.height == 0 {
-		player.width, player.height = 864, 1920
+		player.width, player.height = 1920, 764
 	}
 	if player.framerate == 0 {
 		player.framerate = 25.0
@@ -154,10 +154,10 @@ func (s *SDLPlayer) Run() {
 	//var currentTouchPos sdl.Point
 
 	running := true
-	frameDelay := time.Second / time.Duration(s.player.framerate)
+	//	frameDelay := time.Second / time.Duration(s.player.framerate)
 
 	for running {
-		frameStart := time.Now()
+		//frameStart := time.Now()
 		var event sdl.Event
 		// 处理事件
 		for sdl.PollEvent(&event) {
@@ -215,11 +215,9 @@ func (s *SDLPlayer) Run() {
 		sdl.RenderPresent(s.renderer)
 
 		// 控制帧率
-		elapsed := time.Since(frameStart)
-		if elapsed < frameDelay {
 
-			sdl.DelayNS(uint64((frameDelay - elapsed).Nanoseconds()))
-		}
+		sdl.DelayNS(uint64(1000 * 5000))
+
 	}
 }
 

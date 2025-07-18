@@ -12,13 +12,13 @@ require (
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
 	github.com/jupiterrider/purego-sdl3 v0.0.0-20250708183231-2c5a07454892
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
+	github.com/moonfdd/ffmpeg-go v0.0.0-20240925083614-afd889cdf7fa
 	github.com/pion/webrtc/v4 v4.1.3
 	github.com/sunaipa5/libvlcPurego v0.1.0
 	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/wlynxg/anet v0.0.5
 	golang.org/x/image v0.26.0
 	golang.org/x/mobile v0.0.0-20250408133729-978277e7eaf7
-	golang.org/x/sys v0.33.0
 )
 
 require (
@@ -96,6 +96,7 @@ require (
 	github.com/vcaesar/imgo v0.40.2 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/vcaesar/tt v0.20.1 // indirect
+	github.com/ying32/dylib v0.0.0-20220227124818-fdf9ea9fbc96 // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
@@ -103,6 +104,7 @@ require (
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

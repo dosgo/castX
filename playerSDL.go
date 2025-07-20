@@ -43,7 +43,7 @@ func NewH264Player(ffmpegIo *ffmpegapi.FfmpegIo) (*H264Player, error) {
 	}
 
 	if player.width == 0 || player.height == 0 {
-		player.width, player.height = 864, 1920
+		player.width, player.height = 1920, 864
 	}
 	if player.framerate == 0 {
 		player.framerate = 25.0
@@ -105,7 +105,10 @@ func (p *H264Player) Close() {
 
 func (p *H264Player) RebootFfmpeg() {
 	if p.videoFfmpeg != nil {
-		p.videoFfmpeg.Process.Kill()
+		fmt.Printf("kill ffmoeg\r\n")
+		if p.videoFfmpeg.Process != nil {
+			p.videoFfmpeg.Process.Kill()
+		}
 	}
 	time.Sleep(time.Millisecond * 500)
 	go p.startNewFFmpeg()
@@ -299,7 +302,7 @@ func main() {
 
 	})
 
-	client.Start("ws://172.30.17.78:8081/ws", "666666", 1920)
+	client.Start("ws://192.168.176.210:8081/ws", "666666", 1920)
 
 	// 创建SDL播放器
 	sdlPlayer, err = NewSDLPlayer(player, client)

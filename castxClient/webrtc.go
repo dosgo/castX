@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 
+	"github.com/pion/opus"
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media/h264writer"
 )
@@ -35,8 +37,9 @@ func (client *CastXClient) initWebRtc() error {
 		fmt.Printf("开始接收轨道: %s\n", track.Codec().MimeType)
 
 		if track.Codec().MimeType == "video/H264" {
-			h264writer := h264writer.NewWith(client.stream)
+
 			go func() {
+				h264writer := h264writer.NewWith(client.stream)
 				for {
 					rtpPacket, _, err := track.ReadRTP()
 					if err != nil {
@@ -47,7 +50,32 @@ func (client *CastXClient) initWebRtc() error {
 			}()
 		}
 		if track.Codec().MimeType == "audio/opus" {
+			go func() {
+				ior, iow := io.Pipe()
+				player := NewPlayer(ior)
+				fmt.Printf("iow:%+v\r\n", iow)
+				dec := opus.NewDecoder()
+				pcmData := make([]byte, 1024*2)
+				go func() {
+					for {
+						rtpPacket, _, err := track.ReadRTP()
+						if err != nil {
+							break
+						}
 
+						//fmt.Printf("Payload:%+v\r\n", rtpPacket.Payload)
+						//iow.Write(rtpPacket.Payload)
+						_, _, err = dec.Decode(rtpPacket.Payload, pcmData)
+						if err != nil {
+							fmt.Printf("errr1111:%+v\r\n", err)
+						}
+
+					}
+				}()
+				// 3. 开始播放
+				player.Play()
+
+			}()
 		}
 
 	})

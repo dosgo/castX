@@ -5,9 +5,9 @@ import (
 	"io"
 	"sync"
 
+	"github.com/dosgo/libopus/opus"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/speaker"
-	"gopkg.in/hraban/opus.v2"
 )
 
 // Player 简单的Opus音频播放器
@@ -30,7 +30,7 @@ func (p *Player) Play() {
 	const sampleRate = 48000
 	const channels = 1 // mono; 2 for stereo
 
-	enc, err := opus.NewDecoder(sampleRate, channels, opus.AppVoIP)
+	decoder, err := opus.NewOpusDecoder(sampleRate, channels)
 	if err != nil {
 		return
 	}
@@ -43,13 +43,14 @@ func (p *Player) Play() {
 		opusData := make([]byte, 1500)
 		size, err := p.reader.Read(opusData)
 		if err != nil || size == 0 {
-			fmt.Printf("StreamerFunc11\r\n")
+			fmt.Printf("StreamerFunc size:%d err:%+v\r\n", err, size)
 			return 0, false
 		}
 
 		// 解码Opus
-		pcmData := make([]byte, len(samples)*2)
-		decoded, _, err := dec.Decode(opusData[:size], pcmData)
+		pcmData := make([]int16, len(samples)*2)
+
+		decoded, err := decoder.Decode(opusData, 0, size, pcmData, 0, len(samples), false)
 		if err != nil || decoded == 0 {
 			fmt.Printf("StreamerFunc22 err:%+v\r\n", err)
 			return 0, false

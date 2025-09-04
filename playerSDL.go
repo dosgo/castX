@@ -302,7 +302,7 @@ func main() {
 
 	})
 
-	client.Start("ws://192.168.176.210:8081/ws", "666666", 1920)
+	client.Start("ws://192.168.221.147:8081/ws", "666666", 1920)
 
 	// 创建SDL播放器
 	sdlPlayer, err = NewSDLPlayer(player, client)

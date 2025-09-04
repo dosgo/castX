@@ -1,9 +1,10 @@
 module github.com/dosgo/castX
 
-go 1.24.0
+go 1.25
 
 require (
 	github.com/dosgo/libadb v1.3.3
+	github.com/dosgo/libopus v0.0.0-20250904143724-827b1991eaec
 	github.com/faiface/beep v1.1.0
 	github.com/go-vgo/robotgo v0.110.7
 	github.com/gopxl/pixel v1.0.0
@@ -20,7 +21,6 @@ require (
 	github.com/wlynxg/anet v0.0.5
 	golang.org/x/image v0.26.0
 	golang.org/x/mobile v0.0.0-20250408133729-978277e7eaf7
-	gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302
 )
 
 require (

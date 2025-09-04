@@ -2,11 +2,12 @@ package castxClient
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
 
-	"github.com/pion/opus"
+	"github.com/dosgo/libopus/opus"
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media/h264writer"
 )
@@ -54,8 +55,10 @@ func (client *CastXClient) initWebRtc() error {
 				ior, iow := io.Pipe()
 				player := NewPlayer(ior)
 				fmt.Printf("iow:%+v\r\n", iow)
-				dec := opus.NewDecoder()
-				pcmData := make([]byte, 1024*2)
+				const sampleRate = 48000
+				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
+
+				pcmData := make([]int16, 1024*2)
 				go func() {
 					for {
 						rtpPacket, _, err := track.ReadRTP()
@@ -65,10 +68,13 @@ func (client *CastXClient) initWebRtc() error {
 
 						//fmt.Printf("Payload:%+v\r\n", rtpPacket.Payload)
 						//iow.Write(rtpPacket.Payload)
-						_, _, err = dec.Decode(rtpPacket.Payload, pcmData)
+
+						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, sampleRate, false)
+
 						if err != nil {
 							fmt.Printf("errr1111:%+v\r\n", err)
 						}
+						iow.Write(Int16SliceToByteSlice(pcmData[:outLen]))
 
 					}
 				}()
@@ -80,6 +86,17 @@ func (client *CastXClient) initWebRtc() error {
 
 	})
 	return nil
+}
+func Int16SliceToByteSlice(input []int16) []byte {
+	// 计算所需的字节长度
+	byteLen := len(input) * 2 // 每个int16占2个字节
+	buf := make([]byte, byteLen)
+
+	// 使用binary包进行转换
+	for i, s := range input {
+		binary.LittleEndian.PutUint16(buf[i*2:], uint16(s))
+	}
+	return buf
 }
 func (client *CastXClient) CreateOffer() error {
 	gatherCompletePromise := webrtc.GatheringCompletePromise(client.peerConnection)

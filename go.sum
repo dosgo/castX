@@ -16,6 +16,8 @@ github.com/dblohm7/wingoes v0.0.0-20240820181039-f2b84150679e/go.mod h1:SUxUaAK/
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/dosgo/libadb v1.3.3 h1:G4/UYzLUep5Ro40D7pM3vEhVp7kJ34rdazczGcHgJqI=
 github.com/dosgo/libadb v1.3.3/go.mod h1:eytq4ToA5oPDMvkH8tD7yLOB8ut7rkeCppmv01r/qZI=
+github.com/dosgo/libopus v0.0.0-20250904143724-827b1991eaec h1:iy5aUY/y0EIJXYIAFqGMDQHUTVNIPSpxCj9XQu1/Vnc=
+github.com/dosgo/libopus v0.0.0-20250904143724-827b1991eaec/go.mod h1:/mcWRks3r8UuAwAEsifqAXrj45vp2R1OFIXYyoyw16E=
 github.com/dosgo/spake2-go v0.0.0-20241019170010-3b8be66d26f7 h1:BwlYEjA/y6gyCSRyhEVeLZ7HxnB0krs/2+TaG4bGjjs=
 github.com/dosgo/spake2-go v0.0.0-20241019170010-3b8be66d26f7/go.mod h1:orsUSpRyx/wXpYlpvaRz70nJ49+kLQCd2gP3JVfamD8=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 h1:Gk1XUEttOk0/hb6Tq3WkmutWa0ZLhNn/6fc6XZpM7tM=
@@ -263,8 +265,6 @@ golang.org/x/tools v0.32.0 h1:Q7N1vhpkQv7ybVzLFtTjvQya2ewbwNDZzUgfXGqtMWU=
 golang.org/x/tools v0.32.0/go.mod h1:ZxrU41P/wAbZD8EDa6dDCa6XfpkhJ7HFMjHJXfBDu8s=
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302 h1:xeVptzkP8BuJhoIjNizd2bRHfq9KB9HfOLZu90T04XM=
-gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302/go.mod h1:/L5E7a21VWl8DeuCPKxQBdVG5cy+L0MRZ08B1wnqt7g=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.7/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=

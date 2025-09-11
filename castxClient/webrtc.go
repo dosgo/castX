@@ -65,7 +65,9 @@ func (client *CastXClient) initWebRtc() error {
 						if err != nil {
 							break
 						}
+
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, sampleRate, false)
+
 						if err != nil {
 							fmt.Printf("errr1111:%+v\r\n", err)
 						}

@@ -2,9 +2,11 @@ package castxClient
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math"
 	"sync"
+	"time"
 
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/speaker"
@@ -24,25 +26,34 @@ func NewPlayer(reader io.Reader) *Player {
 	return p
 }
 
+var start = time.Now()
+
 // Play 开始播放音频流
 func (p *Player) Play() {
 	var mu sync.Mutex
 	p.streamer = beep.StreamerFunc(func(samples [][2]float64) (n int, ok bool) {
 		mu.Lock()
 		defer mu.Unlock()
+
+		elapsed := time.Since(start)
+		fmt.Printf("elapsed:%+v\r\n", elapsed)
+		start = time.Now()
 		// 读取Opus数据
 		opusData := make([]byte, 960*2)
+		start1 := time.Now()
 		size, err := p.reader.Read(opusData)
+		elapsed1 := time.Since(start1)
+		fmt.Printf("read elapsed:%+v\r\n", elapsed1)
 		if err != nil || size == 0 {
 			return 0, false
 		}
-		bytesToSamples(opusData[:size], samples)
-		return len(samples), true
+		_len := bytesToSamples(opusData[:size], samples)
+		return _len, true
 	})
 	speaker.Play(p.streamer)
 }
 
-func bytesToSamples(data []byte, samples [][2]float64) {
+func bytesToSamples(data []byte, samples [][2]float64) int {
 	// 每4个字节代表一个立体声样本（左右声道各2字节）
 	sampleCount := len(data) / 4
 	//samples := make([][2]float64, sampleCount)
@@ -60,6 +71,7 @@ func bytesToSamples(data []byte, samples [][2]float64) {
 			float64(right) / math.MaxInt16,
 		}
 	}
+	return sampleCount
 }
 
 // Close 停止播放并释放资源

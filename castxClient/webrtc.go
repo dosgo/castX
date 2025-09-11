@@ -65,12 +65,7 @@ func (client *CastXClient) initWebRtc() error {
 						if err != nil {
 							break
 						}
-
-						//fmt.Printf("Payload:%+v\r\n", rtpPacket.Payload)
-						//iow.Write(rtpPacket.Payload)
-
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, sampleRate, false)
-
 						if err != nil {
 							fmt.Printf("errr1111:%+v\r\n", err)
 						}
@@ -80,7 +75,6 @@ func (client *CastXClient) initWebRtc() error {
 				}()
 				// 3. 开始播放
 				player.Play()
-
 			}()
 		}
 

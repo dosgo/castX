@@ -3,8 +3,8 @@ package castxClient
 import (
 	"encoding/binary"
 	"io"
+	"math"
 	"sync"
-	"time"
 
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/speaker"
@@ -20,20 +20,8 @@ type Player struct {
 func NewPlayer(reader io.Reader) *Player {
 	p := &Player{reader: reader}
 	sr := beep.SampleRate(48000)
-	speaker.Init(sr, sr.N(time.Second/20)) // 48kHz采样率，20ms缓冲区
-
+	speaker.Init(sr, 960) // 48kHz采样率，20ms缓冲区
 	return p
-}
-func bytesToInt16(data []byte) []int16 {
-	if len(data)%2 != 0 {
-		panic("字节长度必须是2的倍数")
-	}
-
-	result := make([]int16, len(data)/2)
-	for i := range result {
-		result[i] = int16(binary.LittleEndian.Uint16(data[i*2 : (i+1)*2]))
-	}
-	return result
 }
 
 // Play 开始播放音频流
@@ -43,25 +31,35 @@ func (p *Player) Play() {
 		mu.Lock()
 		defer mu.Unlock()
 		// 读取Opus数据
-		opusData := make([]byte, 5000)
+		opusData := make([]byte, 960*2)
 		size, err := p.reader.Read(opusData)
 		if err != nil || size == 0 {
 			return 0, false
 		}
-		pcmData := bytesToInt16(opusData[:size])
-		// 转换为立体声
-		for i := 0; i < int(size/2); i++ {
-			if i >= len(samples) {
-				break
-			}
-			val := float32(pcmData[i]) / 32768.0
-			samples[i][0] = float64(val)
-			samples[i][1] = float64(val)
-			n = i + 1
-		}
-		return n, true
+		bytesToSamples(opusData[:size], samples)
+		return len(samples), true
 	})
 	speaker.Play(p.streamer)
+}
+
+func bytesToSamples(data []byte, samples [][2]float64) {
+	// 每4个字节代表一个立体声样本（左右声道各2字节）
+	sampleCount := len(data) / 4
+	//samples := make([][2]float64, sampleCount)
+	for i := 0; i < sampleCount; i++ {
+		// 计算当前样本在字节切片中的位置
+		pos := i * 4
+		// 提取左声道样本（前2字节）
+		left := int16(binary.LittleEndian.Uint16(data[pos : pos+2]))
+		// 提取右声道样本（后2字节）
+		right := int16(binary.LittleEndian.Uint16(data[pos+2 : pos+4]))
+
+		// 将int16转换为float64并归一化到[-1, 1]范围
+		samples[i] = [2]float64{
+			float64(left) / math.MaxInt16,
+			float64(right) / math.MaxInt16,
+		}
+	}
 }
 
 // Close 停止播放并释放资源

@@ -69,6 +69,7 @@ func (client *CastXClient) initWebRtc() error {
 						if err != nil {
 							fmt.Printf("errr1111:%+v\r\n", err)
 						}
+						//fmt.Printf("outLen:%d\r\n", outLen)
 						iow.Write(Int16SliceToByteSlice(pcmData[:outLen]))
 
 					}

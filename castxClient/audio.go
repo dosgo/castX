@@ -36,12 +36,12 @@ func (p *Player) Play() {
 		defer mu.Unlock()
 
 		elapsed := time.Since(start)
-		fmt.Printf("elapsed:%+v\r\n", elapsed)
+		fmt.Printf("elapsed:%+v len(samples):%d\r\n", elapsed, len(samples))
 		start = time.Now()
 		// 读取Opus数据
-		opusData := make([]byte, 960*2)
+		opusData := make([]byte, len(samples)*4) // 每个样本4字节（16位立体声）
 		start1 := time.Now()
-		size, err := p.reader.Read(opusData)
+		size, err := io.ReadFull(p.reader, opusData)
 		elapsed1 := time.Since(start1)
 		fmt.Printf("read elapsed:%+v\r\n", elapsed1)
 		if err != nil || size == 0 {

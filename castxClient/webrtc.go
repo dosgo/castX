@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/dosgo/libopus/opus"
 	"github.com/pion/webrtc/v4"
@@ -53,6 +54,7 @@ func (client *CastXClient) initWebRtc() error {
 		if track.Codec().MimeType == "audio/opus" {
 			go func() {
 				ior, iow := io.Pipe()
+
 				player := NewPlayer(ior)
 				fmt.Printf("iow:%+v\r\n", iow)
 				const sampleRate = 48000
@@ -67,7 +69,10 @@ func (client *CastXClient) initWebRtc() error {
 						}
 
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, sampleRate, false)
-
+						if len(rtpPacket.Payload) > 3 {
+							os.WriteFile("test.opus", rtpPacket.Payload, os.ModePerm)
+						}
+						//	fmt.Printf("len(rtpPacket.Payload):%d\r\n", len(rtpPacket.Payload))
 						if err != nil {
 							fmt.Printf("errr1111:%+v\r\n", err)
 						}

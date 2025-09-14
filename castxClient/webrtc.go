@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/dosgo/libopus/opus"
 	"github.com/pion/webrtc/v4"
@@ -53,10 +55,9 @@ func (client *CastXClient) initWebRtc() error {
 		}
 		if track.Codec().MimeType == "audio/opus" {
 			go func() {
-				ior, iow := io.Pipe()
-
-				player := NewPlayer(ior)
-				fmt.Printf("iow:%+v\r\n", iow)
+				//ior, iow := io.Pipe()
+				sss := NewStringReader()
+				player := NewPlayer(sss)
 				const sampleRate = 48000
 				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
 
@@ -67,7 +68,8 @@ func (client *CastXClient) initWebRtc() error {
 						if err != nil {
 							break
 						}
-
+						AppendFile("testnew.opus", rtpPacket.Payload, 0644)
+						fmt.Printf("rtpPacket.Payload:%+v\r\n", rtpPacket.Payload)
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, sampleRate, false)
 						if len(rtpPacket.Payload) > 3 {
 							os.WriteFile("test.opus", rtpPacket.Payload, os.ModePerm)
@@ -77,7 +79,9 @@ func (client *CastXClient) initWebRtc() error {
 							fmt.Printf("errr1111:%+v\r\n", err)
 						}
 						//fmt.Printf("outLen:%d\r\n", outLen)
-						iow.Write(Int16SliceToByteSlice(pcmData[:outLen]))
+
+						sss.Write(ManualWriteInt16(pcmData[:outLen]))
+						// 处理解析后的帧
 
 					}
 				}()
@@ -99,6 +103,19 @@ func Int16SliceToByteSlice(input []int16) []byte {
 		binary.LittleEndian.PutUint16(buf[i*2:], uint16(s))
 	}
 	return buf
+}
+
+func ManualWriteInt16(data []int16) []byte {
+	var xx bytes.Buffer
+	for _, v := range data {
+		// 将 int16 分解为两个字节
+		b1 := byte(v)
+		b2 := byte(v >> 8)
+
+		// 写入两个字节
+		xx.Write([]byte{b1, b2})
+	}
+	return xx.Bytes()
 }
 func (client *CastXClient) CreateOffer() error {
 	gatherCompletePromise := webrtc.GatheringCompletePromise(client.peerConnection)
@@ -129,4 +146,51 @@ func (client *CastXClient) SetRemoteDescription(data map[string]interface{}) {
 	if err := client.peerConnection.SetRemoteDescription(answer); err != nil {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 	}
+}
+
+type StringReader struct {
+	mu     sync.Mutex
+	buf    bytes.Buffer
+	cuTime time.Time
+}
+
+// 构造函数
+func NewStringReader() *StringReader {
+	obj := &StringReader{cuTime: time.Now()}
+	return obj
+}
+
+// 2. 实现 io.Reader 接口
+func (r *StringReader) Read(p []byte) (n int, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var readLen = 1920 * 2
+	var buf = make([]byte, readLen)
+	io.ReadFull(&r.buf, buf)
+	copy(p, buf)
+	AppendFile("test.pcm", buf, 0644)
+	elapsed := time.Since(r.cuTime)
+	fmt.Printf("elapsed:%+v \r\n", elapsed)
+	if elapsed < 20 {
+		time.Sleep(time.Millisecond * (20 - elapsed))
+	}
+	r.cuTime = time.Now()
+	return readLen, nil
+}
+func AppendFile(filename string, data []byte, perm os.FileMode) error {
+	//ffplay -f s16le -ar 48000 -ch_layout stereo test.pcm
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, perm)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write(data)
+	return err
+}
+func (r *StringReader) Write(p []byte) (n int, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.buf.Write(p)
+	return len(p), nil
 }

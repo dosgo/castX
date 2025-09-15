@@ -63,13 +63,19 @@ func (client *CastXClient) initWebRtc() error {
 
 				pcmData := make([]int16, 1024*2)
 				go func() {
+					one := true
 					for {
 						rtpPacket, _, err := track.ReadRTP()
 						if err != nil {
 							break
 						}
-						AppendFile("testnew.opus", rtpPacket.Payload, 0644)
-						fmt.Printf("rtpPacket.Payload:%+v\r\n", rtpPacket.Payload)
+						//跳过第一个包  AOPUSHD
+						if one {
+							one = false
+							continue
+						}
+						AppendFile("testnew.opus", rtpPacket.Payload, 0644, true)
+						fmt.Printf("len:%drtpPacket.Payload:%+v\r\n", len(rtpPacket.Payload), rtpPacket.Payload)
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, sampleRate, false)
 						if len(rtpPacket.Payload) > 3 {
 							os.WriteFile("test.opus", rtpPacket.Payload, os.ModePerm)
@@ -169,7 +175,7 @@ func (r *StringReader) Read(p []byte) (n int, err error) {
 	var buf = make([]byte, readLen)
 	io.ReadFull(&r.buf, buf)
 	copy(p, buf)
-	AppendFile("test.pcm", buf, 0644)
+	AppendFile("test.pcm", buf, 0644, false)
 	elapsed := time.Since(r.cuTime)
 	fmt.Printf("elapsed:%+v \r\n", elapsed)
 	if elapsed < 20 {
@@ -178,13 +184,18 @@ func (r *StringReader) Read(p []byte) (n int, err error) {
 	r.cuTime = time.Now()
 	return readLen, nil
 }
-func AppendFile(filename string, data []byte, perm os.FileMode) error {
+func AppendFile(filename string, data []byte, perm os.FileMode, isLen bool) error {
 	//ffplay -f s16le -ar 48000 -ch_layout stereo test.pcm
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, perm)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	if isLen {
+		lengthBuf := make([]byte, 4)
+		binary.LittleEndian.PutUint32(lengthBuf, uint32(len(data)))
+		file.Write(lengthBuf)
+	}
 	_, err = file.Write(data)
 	return err
 }

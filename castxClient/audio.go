@@ -76,7 +76,7 @@ func (p *Player) Play() {
 		speaker.Play(p.streamer)
 	*/
 	p.player.Play()
-	p.player.SetVolume(0.9)
+	p.player.SetVolume(0.4)
 
 	for p.player.IsPlaying() {
 		time.Sleep(time.Millisecond * 10)

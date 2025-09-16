@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/dosgo/libadb v1.3.3
-	github.com/dosgo/libopus v0.0.0-20250910105718-ec4c98ce4a68
+	github.com/dosgo/libopus v0.0.0-20250916033225-cedf8974b83a
 	github.com/ebitengine/oto/v3 v3.3.3
 	github.com/go-vgo/robotgo v0.110.7
 	github.com/gopxl/beep/v2 v2.1.1

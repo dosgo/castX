@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dosgo/castX/comm"
+	opusComm "github.com/dosgo/libopus/comm"
 	"github.com/dosgo/libopus/opus"
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media/h264writer"
@@ -105,8 +106,20 @@ func (client *CastXClient) initWebRtc() error {
 						}
 						//	fmt.Printf("outLen:%d\r\n", outLen)
 						//fmt.Printf("pcmData[:outLen]:%+v\r\n", pcmData[:outLen])
-						sss.Write(ManualWriteInt16(pcmData[:outLen]))
 
+						var resampler = opusComm.NewSpeexResampler(2, 48000, 44100, 10)
+
+						var inputLen = outLen
+						data_packet := make([]int16, 960*2)
+						var outLen1 = len(data_packet)
+
+						resampler.ProcessShort(0, pcmData[:outLen], 0, &inputLen, data_packet, 0, &outLen1)
+
+						sss.Write(ManualWriteInt16(data_packet[:outLen1]))
+						fmt.Printf("outLen:%d\r\n", outLen)
+						fmt.Printf("outLen1:%d\r\n", outLen1)
+						//fmt.Printf("data_packet:%+v\r\n", data_packet[:outLen1])
+						//fmt.Printf("pcmData:%+v\r\n", pcmData[:outLen])
 						// 处理解析后的帧
 
 					}
@@ -201,7 +214,7 @@ func (r *StringReader) Read(p []byte) (n int, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	var readLen = 1920 * 2
+	var readLen = 882 * 2 * 2
 	var buf = make([]byte, readLen)
 	io.ReadFull(&r.buf, buf)
 	copy(p, buf)

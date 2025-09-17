@@ -27,7 +27,7 @@ func NewPlayer(reader io.Reader) *Player {
 	p := &Player{reader: reader}
 
 	otoCtx, readyChan, err := oto.NewContext(&oto.NewContextOptions{
-		SampleRate:   48000,
+		SampleRate:   44100,
 		ChannelCount: 2,
 		Format:       oto.FormatSignedInt16LE,
 		BufferSize:   960 * 1000,

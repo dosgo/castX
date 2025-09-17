@@ -88,10 +88,10 @@ func (client *CastXClient) initWebRtc() error {
 						}
 						//没有首包丢弃
 						if preSkip == 0 {
-							continue
+							//continue
 						} else {
 							if i <= int(preSkip) {
-								continue
+								//	continue
 							}
 						}
 

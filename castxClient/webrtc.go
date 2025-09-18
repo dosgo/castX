@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"sync"
-	"time"
 
 	"github.com/dosgo/castX/comm"
 	opusComm "github.com/dosgo/libopus/comm"
@@ -57,9 +54,9 @@ func (client *CastXClient) initWebRtc() error {
 		}
 		if track.Codec().MimeType == "audio/opus" {
 			go func() {
-				//ior, iow := io.Pipe()
-				sss := NewStringReader()
-				player := NewPlayer(sss)
+				ior, iow := io.Pipe()
+				//var buf bytes.Buffer
+				player := NewPlayer(ior)
 				const sampleRate = 48000
 				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
 
@@ -67,7 +64,9 @@ func (client *CastXClient) initWebRtc() error {
 				go func() {
 					//one := true
 					i := 0
-					var preSkip uint16 = 0
+
+					var resampler = opusComm.NewSpeexResampler(2, 48000, 44100, 10)
+
 					for {
 						rtpPacket, _, err := track.ReadRTP()
 						if err != nil {
@@ -76,27 +75,16 @@ func (client *CastXClient) initWebRtc() error {
 						i++
 						//跳过第一个包  AOPUSHD
 						if IsOpusHead(rtpPacket.Payload) {
-
 							// 2. 将长度前缀转换为uint32
 							length := binary.LittleEndian.Uint64(rtpPacket.Payload[8:16])
-
 							//one = false
 							opHead := comm.ParseOpusHead(rtpPacket.Payload[16 : 16+length])
 							fmt.Printf("rtpPacket.Payload:%+v\r\n", rtpPacket.Payload)
 							fmt.Printf("opus head:%+v\r\n", opHead)
-							preSkip = opHead.PreSkip
 							continue
 						}
-						//没有首包丢弃
-						if preSkip == 0 {
-							//continue
-						} else {
-							if i <= int(preSkip) {
-								//	continue
-							}
-						}
 
-						AppendFile("testnew.opus", rtpPacket.Payload, 0644, true)
+						//	AppendFile("testnew.opus", rtpPacket.Payload, 0644, true)
 
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, 960*2, false)
 
@@ -107,21 +95,13 @@ func (client *CastXClient) initWebRtc() error {
 						//	fmt.Printf("outLen:%d\r\n", outLen)
 						//fmt.Printf("pcmData[:outLen]:%+v\r\n", pcmData[:outLen])
 
-						var resampler = opusComm.NewSpeexResampler(2, 48000, 44100, 10)
-
 						var inputLen = outLen
 						data_packet := make([]int16, 960*2)
 						var outLen1 = len(data_packet)
 
 						resampler.ProcessShort(0, pcmData[:outLen], 0, &inputLen, data_packet, 0, &outLen1)
 
-						sss.Write(ManualWriteInt16(data_packet[:outLen1]))
-						fmt.Printf("outLen:%d\r\n", outLen)
-						fmt.Printf("outLen1:%d\r\n", outLen1)
-						//fmt.Printf("data_packet:%+v\r\n", data_packet[:outLen1])
-						//fmt.Printf("pcmData:%+v\r\n", pcmData[:outLen])
-						// 处理解析后的帧
-
+						iow.Write(ManualWriteInt16(data_packet[:outLen1]))
 					}
 				}()
 				// 3. 开始播放
@@ -195,57 +175,4 @@ func (client *CastXClient) SetRemoteDescription(data map[string]interface{}) {
 	if err := client.peerConnection.SetRemoteDescription(answer); err != nil {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 	}
-}
-
-type StringReader struct {
-	mu     sync.Mutex
-	buf    bytes.Buffer
-	cuTime time.Time
-}
-
-// 构造函数
-func NewStringReader() *StringReader {
-	obj := &StringReader{cuTime: time.Now()}
-	return obj
-}
-
-// 2. 实现 io.Reader 接口
-func (r *StringReader) Read(p []byte) (n int, err error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	var readLen = 882 * 2 * 2
-	var buf = make([]byte, readLen)
-	io.ReadFull(&r.buf, buf)
-	copy(p, buf)
-
-	elapsed := time.Since(r.cuTime)
-	//	fmt.Printf("elapsed:%+v \r\n", elapsed)
-	if elapsed < 20 {
-		time.Sleep(time.Millisecond * (20 - elapsed))
-	}
-	r.cuTime = time.Now()
-	return readLen, nil
-}
-func AppendFile(filename string, data []byte, perm os.FileMode, isLen bool) error {
-	//ffplay -f s16le -ar 48000 -ch_layout stereo test.pcm
-	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, perm)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	if isLen {
-		lengthBuf := make([]byte, 4)
-		binary.LittleEndian.PutUint32(lengthBuf, uint32(len(data)))
-		file.Write(lengthBuf)
-	}
-	_, err = file.Write(data)
-	return err
-}
-func (r *StringReader) Write(p []byte) (n int, err error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.buf.Write(p)
-	AppendFile("test.pcm", p, 0644, false)
-	return len(p), nil
 }

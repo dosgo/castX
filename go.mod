@@ -4,7 +4,6 @@ go 1.25
 
 require (
 	github.com/dosgo/libadb v1.3.3
-	github.com/dosgo/libopus v0.0.0-20250916033225-cedf8974b83a
 	github.com/ebitengine/oto/v3 v3.3.3
 	github.com/go-vgo/robotgo v0.110.7
 	github.com/gopxl/beep/v2 v2.1.1
@@ -12,7 +11,6 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/gotranspile/opus v0.0.0-20240117201745-f13b5cac39fb
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
-	github.com/jfreymuth/pulse v0.1.1
 	github.com/jupiterrider/purego-sdl3 v0.0.0-20250708183231-2c5a07454892
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
 	github.com/moonfdd/ffmpeg-go v0.0.0-20240925083614-afd889cdf7fa
@@ -23,6 +21,8 @@ require (
 	golang.org/x/image v0.26.0
 	golang.org/x/mobile v0.0.0-20250408133729-978277e7eaf7
 )
+
+require github.com/dosgo/libopus v0.0.0-20250917151524-ee76c7bd8181
 
 require (
 	github.com/aws/aws-sdk-go v1.38.20 // indirect

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/dosgo/castX/comm"
 	opusComm "github.com/dosgo/libopus/comm"
@@ -105,6 +106,7 @@ func (client *CastXClient) initWebRtc() error {
 					}
 				}()
 				// 3. 开始播放
+				time.Sleep(time.Second * 1)
 				player.Play()
 			}()
 		}

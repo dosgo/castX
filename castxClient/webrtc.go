@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
+	"os"
 	"time"
 
 	"github.com/dosgo/castX/comm"
@@ -55,9 +55,10 @@ func (client *CastXClient) initWebRtc() error {
 		}
 		if track.Codec().MimeType == "audio/opus" {
 			go func() {
-				ior, iow := io.Pipe()
+				//ior, iow := io.Pipe()
+				xx := NewStringReader()
 				//var buf bytes.Buffer
-				player := NewPlayer(ior)
+				player := NewPlayer(xx)
 				const sampleRate = 48000
 				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
 
@@ -102,7 +103,7 @@ func (client *CastXClient) initWebRtc() error {
 
 						resampler.ProcessShort(0, pcmData[:outLen], 0, &inputLen, data_packet, 0, &outLen1)
 
-						iow.Write(ManualWriteInt16(data_packet[:outLen1]))
+						xx.Write(ManualWriteInt16(data_packet[:outLen1]))
 					}
 				}()
 				// 3. 开始播放
@@ -177,4 +178,42 @@ func (client *CastXClient) SetRemoteDescription(data map[string]interface{}) {
 	if err := client.peerConnection.SetRemoteDescription(answer); err != nil {
 		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
 	}
+}
+
+type StringReader struct {
+	buf    bytes.Buffer
+	cuTime time.Time
+}
+
+// 构造函数
+func NewStringReader() *StringReader {
+	obj := &StringReader{cuTime: time.Now()}
+	return obj
+}
+
+// 2. 实现 io.Reader 接口
+func (r *StringReader) Read(p []byte) (n int, err error) {
+	//io.ReadFull(&r.buf, p)
+	n1, _ := r.buf.Read(p)
+	return n1, nil
+}
+func AppendFile(filename string, data []byte, perm os.FileMode, isLen bool) error {
+	//ffplay -f s16le -ar 48000 -ch_layout stereo test.pcm
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, perm)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if isLen {
+		lengthBuf := make([]byte, 4)
+		binary.LittleEndian.PutUint32(lengthBuf, uint32(len(data)))
+		file.Write(lengthBuf)
+	}
+	_, err = file.Write(data)
+	return err
+}
+func (r *StringReader) Write(p []byte) (n int, err error) {
+	r.buf.Write(p)
+	//AppendFile("test.pcm", p, 0644, false)
+	return len(p), nil
 }

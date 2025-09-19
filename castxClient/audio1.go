@@ -3,7 +3,6 @@ package castxClient
 import (
 	"encoding/binary"
 	"io"
-	"math"
 	"time"
 
 	"github.com/gopxl/beep/v2"
@@ -27,6 +26,7 @@ func NewPlayer1(reader io.Reader) *Player1 {
 
 // Play 开始播放音频流
 func (p *Player1) Play() {
+
 	speaker.Play(p.getNoise())
 }
 
@@ -41,8 +41,8 @@ func (p *Player1) getNoise() beep.Streamer {
 		io.ReadFull(p.reader, buf[:len(samples)*4])
 		for i := range samples {
 			pos := i * 4
-			samples[i][0] = float64(binary.LittleEndian.Uint16(buf[pos:pos+2])) / math.MaxInt16
-			samples[i][1] = float64(binary.LittleEndian.Uint16(buf[pos+2:pos+4])) / math.MaxInt16
+			samples[i][0] = float64(int16(binary.LittleEndian.Uint16(buf[pos:pos+2]))) / 32768
+			samples[i][1] = float64(int16(binary.LittleEndian.Uint16(buf[pos+2:pos+4]))) / 32768
 		}
 		return len(samples), true
 	})

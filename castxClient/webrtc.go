@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/dosgo/castX/comm"
@@ -56,10 +57,11 @@ func (client *CastXClient) initWebRtc() error {
 		}
 		if track.Codec().MimeType == "audio/opus" {
 			go func() {
-				ior, iow := io.Pipe()
+				ioBuf := NewBufferedPipe(1024 * 1024)
+				io.Pipe()
 				//xx := NewStringReader()
 				//var buf bytes.Buffer
-				player := NewPlayer(ior)
+				player := NewPlayer(ioBuf)
 				const sampleRate = 48000
 				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
 
@@ -104,7 +106,7 @@ func (client *CastXClient) initWebRtc() error {
 
 						resampler.ProcessShort(0, pcmData[:outLen], 0, &inputLen, data_packet, 0, &outLen1)
 
-						iow.Write(ManualWriteInt16(data_packet[:outLen1]))
+						ioBuf.Write(ManualWriteInt16(data_packet[:outLen1]))
 					}
 				}()
 				// 3. 开始播放
@@ -195,4 +197,46 @@ func AppendFile(filename string, data []byte, perm os.FileMode, isLen bool) erro
 	}
 	_, err = file.Write(data)
 	return err
+}
+
+// BufferedPipe 带缓冲的非阻塞管道
+type BufferedPipe struct {
+	buf bytes.Buffer
+	mu  sync.Mutex // 互斥锁
+}
+
+// NewBufferedPipe 创建新的带缓冲管道
+func NewBufferedPipe(bufferSize int) *BufferedPipe {
+	p := &BufferedPipe{}
+	return p
+}
+
+// Write 写入数据到管道（非阻塞）
+func (p *BufferedPipe) Write(data []byte) (int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.buf.Write(data)
+}
+
+// Read 从管道读取数据（非阻塞）
+func (p *BufferedPipe) Read(data []byte) (int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	len, _ := p.buf.Read(data)
+	return len, nil
+}
+
+// Close 关闭管道
+func (p *BufferedPipe) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return nil
+}
+
+// 辅助函数
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

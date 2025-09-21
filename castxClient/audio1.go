@@ -20,13 +20,13 @@ type Player1 struct {
 func NewPlayer1(reader io.Reader) *Player1 {
 	p := &Player1{reader: reader}
 	sr := beep.SampleRate(44100)
-	speaker.Init(sr, sr.N(time.Second/10))
+	speaker.Init(sr, sr.N(time.Second/20))
 	return p
 }
 
 // Play 开始播放音频流
 func (p *Player1) Play() {
-
+	//	resampled := beep.Resample(10, 48000, 44100, p.getNoise())
 	speaker.Play(p.getNoise())
 }
 

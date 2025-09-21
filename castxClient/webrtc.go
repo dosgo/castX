@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
+	"math"
 	"os"
 	"sync"
 	"time"
@@ -18,6 +18,7 @@ import (
 )
 
 func (client *CastXClient) initWebRtc() error {
+	var isResampler = false
 	config := webrtc.Configuration{}
 	//	depacketizer := NewH264Depacketizer(client)
 	var err error
@@ -58,10 +59,11 @@ func (client *CastXClient) initWebRtc() error {
 		if track.Codec().MimeType == "audio/opus" {
 			go func() {
 				ioBuf := NewBufferedPipe(1024 * 1024)
-				io.Pipe()
+
 				//xx := NewStringReader()
 				//var buf bytes.Buffer
-				player := NewPlayer(ioBuf)
+				player := NewPlayer1(ioBuf)
+
 				const sampleRate = 48000
 				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
 
@@ -69,8 +71,8 @@ func (client *CastXClient) initWebRtc() error {
 				go func() {
 					//one := true
 					i := 0
-
-					var resampler = opusComm.NewSpeexResampler(2, 48000, 44100, 10)
+					//
+					var resampler = opusComm.NewSpeexResampler(2, sampleRate, 44100, 10)
 
 					for {
 						rtpPacket, _, err := track.ReadRTP()
@@ -103,10 +105,14 @@ func (client *CastXClient) initWebRtc() error {
 						var inputLen = outLen
 						data_packet := make([]int16, 960*2)
 						var outLen1 = len(data_packet)
-
-						resampler.ProcessShort(0, pcmData[:outLen], 0, &inputLen, data_packet, 0, &outLen1)
-
-						ioBuf.Write(ManualWriteInt16(data_packet[:outLen1]))
+						if isResampler {
+							resampler.ProcessShort(0, pcmData[:outLen], 0, &inputLen, data_packet, 0, &outLen1)
+							ioBuf.Write(ManualWriteInt16(data_packet[:outLen1]))
+						} else {
+							//tmp := processMultiband(pcmData[:outLen], 48000)
+							tmp := applyGain(pcmData[:outLen], 0.7)
+							ioBuf.Write(ManualWriteInt16(tmp))
+						}
 					}
 				}()
 				// 3. 开始播放
@@ -117,6 +123,46 @@ func (client *CastXClient) initWebRtc() error {
 
 	})
 	return nil
+}
+
+func processMultiband(input []int16, sampleRate int) []int16 {
+	output := make([]int16, len(input))
+
+	// 简易高通滤波器参数（提取中高频）
+	rc := 1.0 / (2.0 * math.Pi * 800.0) // 截止频率~800Hz
+	dt := 1.0 / float64(sampleRate)
+	alpha := dt / (rc + dt)
+
+	prev := int(0)
+	for i, s := range input {
+		// 这是一个高通滤波器，outputHigh只包含中高频
+		outputHigh := int16(alpha * (float64(prev) + float64(s) - float64(prev)))
+		prev = int(s)
+
+		// 只对中高频成分进行衰减
+		attenuatedHigh := int(float64(outputHigh) * 0.5) // 衰减50%
+
+		// 重新组合：低频原样输出 + 衰减后的中高频
+		output[i] = int16(int(s) - int(outputHigh) + attenuatedHigh)
+	}
+	return output
+}
+
+func applyGain(pcmData []int16, gain float64) []int16 {
+	// gain: 增益系数。小于1.0就是衰减。
+	// 例如 0.5 就是衰减一半（-6dB），0.7 大约是-3dB
+	result := make([]int16, len(pcmData))
+	for i, sample := range pcmData {
+		adjusted := float64(sample) * gain
+		// 确保转换后不溢出
+		if adjusted > 32767.0 {
+			adjusted = 32767.0
+		} else if adjusted < -32768.0 {
+			adjusted = -32768.0
+		}
+		result[i] = int16(adjusted)
+	}
+	return result
 }
 
 func IsOpusHead(data []byte) bool {
@@ -215,6 +261,7 @@ func NewBufferedPipe(bufferSize int) *BufferedPipe {
 func (p *BufferedPipe) Write(data []byte) (int, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	AppendFile("test.pcm", data, 0664, false)
 	return p.buf.Write(data)
 }
 

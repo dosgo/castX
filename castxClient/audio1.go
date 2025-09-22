@@ -31,7 +31,7 @@ func NewPlayer1(reader io.Reader) *Player1 {
 	}
 	p.buf = make([]byte, 512*p.format.Width())
 
-	speaker.Init(p.format.SampleRate, p.format.SampleRate.N(time.Second/10))
+	speaker.Init(p.format.SampleRate, p.format.SampleRate.N(time.Second/50))
 	return p
 }
 
@@ -64,10 +64,12 @@ func (s *Player1) getStream1() beep.Streamer {
 	return beep.StreamerFunc(func(samples [][2]float64) (n int, ok bool) {
 		width := s.format.Width()
 		io.ReadFull(s.reader, buf[:len(samples)*width])
+		//fmt.Printf("len:%d\r\n", len(samples)*width)
 		for i := range samples {
 			pos := i * width
 			samples[i], _ = s.format.DecodeSigned(buf[pos:])
 		}
+
 		return len(samples), true
 	})
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -60,11 +61,11 @@ func (client *CastXClient) initWebRtc() error {
 		}
 		if track.Codec().MimeType == "audio/opus" {
 			go func() {
-				ioBuf := NewBufferedPipe(1024 * 1024)
+				ioBuf := NewBufferedPipe(1024 * 1024 * 5)
 
 				//xx := NewStringReader()
 				//var buf bytes.Buffer
-				player := NewPlayer1(ioBuf)
+				player := NewPlayer(ioBuf)
 
 				const sampleRate = 48000
 				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
@@ -113,12 +114,16 @@ func (client *CastXClient) initWebRtc() error {
 						} else {
 							//tmp := processMultiband(pcmData[:outLen], 48000)
 							//	tmp := applyGain(pcmData[:outLen], 0.7)
+
+							//slow := LinearInterpolateInt16(pcmData[:outLen], 0.95)
+							//fmt.Printf("slow len:%d len:%d\r\n ", outLen, len(slow))
+							////fmt.Printf("slow:%+v\r\n", slow)
 							ioBuf.Write(ManualWriteInt16(pcmData[:outLen]))
 						}
 					}
 				}()
 				// 3. 开始播放
-				time.Sleep(time.Second * 1)
+				time.Sleep(time.Second * 10)
 				player.Play()
 			}()
 		}
@@ -263,7 +268,7 @@ func NewBufferedPipe(bufferSize int) *BufferedPipe {
 func (p *BufferedPipe) Write(data []byte) (int, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	AppendFile("test.pcm", data, 0664, false)
+	//AppendFile("test.pcm", data, 0664, false)
 	return p.buf.Write(data)
 }
 
@@ -271,8 +276,12 @@ func (p *BufferedPipe) Write(data []byte) (int, error) {
 func (p *BufferedPipe) Read(data []byte) (int, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	len, _ := p.buf.Read(data)
-	return len, nil
+	_data := make([]byte, 1920)
+	//, _ := p.buf.Read(data[:1920])
+	io.ReadFull(&p.buf, _data)
+	copy(data, _data)
+	fmt.Printf("len:%d\r\n", 1920)
+	return len(_data), nil
 }
 
 // Close 关闭管道

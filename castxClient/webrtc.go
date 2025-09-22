@@ -2,9 +2,11 @@ package castxClient
 
 import (
 	"bytes"
+	"container/ring"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"sync"
@@ -110,8 +112,8 @@ func (client *CastXClient) initWebRtc() error {
 							ioBuf.Write(ManualWriteInt16(data_packet[:outLen1]))
 						} else {
 							//tmp := processMultiband(pcmData[:outLen], 48000)
-							tmp := applyGain(pcmData[:outLen], 0.7)
-							ioBuf.Write(ManualWriteInt16(tmp))
+							//	tmp := applyGain(pcmData[:outLen], 0.7)
+							ioBuf.Write(ManualWriteInt16(pcmData[:outLen]))
 						}
 					}
 				}()
@@ -286,4 +288,76 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+type ringBuf struct {
+	queue      *ring.Ring // 环形缓冲区（线程安全）
+	queueMutex sync.Mutex
+}
+
+func (ap *ringBuf) Write(pcmData []byte) {
+	ap.queueMutex.Lock()
+	defer ap.queueMutex.Unlock()
+
+	for _, b := range pcmData {
+		ap.queue.Value = b
+		ap.queue = ap.queue.Next()
+	}
+}
+
+func (ap *ringBuf) Read(buf []byte) {
+	ap.queueMutex.Lock()
+	// 检查是否有足够的数据
+	if ap.queue.Len() >= len(buf) {
+		// 从环形缓冲区取出数据
+		for i := 0; i < len(buf); i++ {
+			buf[i] = ap.queue.Value.(byte)
+			ap.queue = ap.queue.Next()
+		}
+		ap.queueMutex.Unlock()
+
+	} else {
+		ap.queueMutex.Unlock()
+		// 数据不足，插入静音（或PLC算法）
+		for i := range buf {
+			buf[i] = 0 // 静音（0x00）
+		}
+
+	}
+
+}
+
+// 动态调整缓冲区水位
+func (ap *ringBuf) bufferMonitor() {
+
+	const (
+		sampleRate      = 48000 // 采样率（Hz）
+		channels        = 1     // 单声道
+		bitDepth        = 2     // 16-bit PCM（2字节）
+		targetBufferMs  = 200   // 目标缓冲200ms
+		minBufferMs     = 50    // 最低缓冲警戒线
+		maxBufferMs     = 500   // 最高缓冲警戒线
+		framesPerBuffer = 1024  // 每次回调请求的帧数
+	)
+	time.Sleep(100 * time.Millisecond) // 每100ms检查一次
+	ap.queueMutex.Lock()
+	currentBufferMs := (ap.queue.Len() * 1000) / (sampleRate * bitDepth)
+	ap.queueMutex.Unlock()
+
+	switch {
+	case currentBufferMs < minBufferMs:
+		log.Printf("⚠️ 缓冲区过低 (%dms)，网络可能跟不上！", currentBufferMs)
+		// 策略：轻微降速（需要时间伸缩算法，如SoundTouch）
+
+	case currentBufferMs > maxBufferMs:
+		log.Printf("⚠️ 缓冲区过长 (%dms)，丢弃部分数据降低延迟！", currentBufferMs)
+		// 丢弃部分数据
+		ap.queueMutex.Lock()
+		bytesToRemove := ap.queue.Len() - (targetBufferMs * sampleRate * bitDepth / 1000)
+		for i := 0; i < bytesToRemove; i++ {
+			ap.queue = ap.queue.Next()
+		}
+		ap.queueMutex.Unlock()
+	}
+
 }

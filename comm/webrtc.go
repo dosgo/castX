@@ -145,10 +145,16 @@ func NewWebRtc(mimeType string) (*WebrtcServer, error) {
 		return nil, err
 	}
 	//音频轨道
+	audioRTCPFeedback := []webrtc.RTCPFeedback{
+		{"nack", ""},         // 启用基本丢包重传
+		{"transport-cc", ""}, // 可选：传输层拥塞控制（比 goog-remb 更标准）
+	}
 	webrtcServer.outboundAudioTrack, err = webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{
-		MimeType:  "audio/opus",
-		ClockRate: 48000, // Opus标准采样率
-		Channels:  2,     // 立体声
+		RTCPFeedback: audioRTCPFeedback,
+		MimeType:     "audio/opus",
+		ClockRate:    48000, // Opus标准采样率
+		Channels:     2,     // 立体声
+		SDPFmtpLine:  "minptime=10;useinbandfec=0",
 	}, "audio", "screens")
 	if err != nil {
 		return nil, err

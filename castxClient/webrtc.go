@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"os"
@@ -24,6 +23,7 @@ func (client *CastXClient) initWebRtc() error {
 	var isResampler = false
 	config := webrtc.Configuration{}
 	//	depacketizer := NewH264Depacketizer(client)
+
 	var err error
 	// 创建PeerConnection
 	client.peerConnection, err = webrtc.NewPeerConnection(config)
@@ -50,8 +50,11 @@ func (client *CastXClient) initWebRtc() error {
 
 			go func() {
 				h264writer := h264writer.NewWith(client.stream)
+				//	last := time.Now()
 				for {
 					rtpPacket, _, err := track.ReadRTP()
+					//	fmt.Printf("len:%d  video recv:%+v \r\n", len(rtpPacket.Payload), time.Since(last))
+					//		last = time.Now()
 					if err != nil {
 						break
 					}
@@ -60,6 +63,7 @@ func (client *CastXClient) initWebRtc() error {
 			}()
 		}
 		if track.Codec().MimeType == "audio/opus" {
+
 			go func() {
 				ioBuf := NewBufferedPipe(1024 * 1024 * 5)
 
@@ -71,18 +75,23 @@ func (client *CastXClient) initWebRtc() error {
 				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
 
 				pcmData := make([]int16, 1024*2)
+
 				go func() {
 					//one := true
 					i := 0
 					//
 					var resampler = opusComm.NewSpeexResampler(2, sampleRate, 44100, 10)
-
+					last := time.Now()
 					for {
 						rtpPacket, _, err := track.ReadRTP()
+
+						fmt.Printf("SequenceNumber:%d len:%d audio recv:%+v \r\n", rtpPacket.SequenceNumber, len(rtpPacket.Payload), time.Since(last))
+						last = time.Now()
 						if err != nil {
 							break
 						}
 						i++
+
 						//跳过第一个包  AOPUSHD
 						if IsOpusHead(rtpPacket.Payload) {
 							// 2. 将长度前缀转换为uint32
@@ -118,7 +127,9 @@ func (client *CastXClient) initWebRtc() error {
 							//slow := LinearInterpolateInt16(pcmData[:outLen], 0.95)
 							//fmt.Printf("slow len:%d len:%d\r\n ", outLen, len(slow))
 							////fmt.Printf("slow:%+v\r\n", slow)
-							ioBuf.Write(ManualWriteInt16(pcmData[:outLen]))
+							ddd := ManualWriteInt16(pcmData[:outLen])
+							ioBuf.Write(ddd)
+
 						}
 					}
 				}()
@@ -276,12 +287,13 @@ func (p *BufferedPipe) Write(data []byte) (int, error) {
 func (p *BufferedPipe) Read(data []byte) (int, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	_data := make([]byte, 1920)
-	//, _ := p.buf.Read(data[:1920])
-	io.ReadFull(&p.buf, _data)
-	copy(data, _data)
-	fmt.Printf("len:%d\r\n", 1920)
-	return len(_data), nil
+	//_data := make([]byte, 1920)
+	readLen := min(1920, len(data))
+	_len, _ := p.buf.Read(data[:readLen])
+	//io.ReadFull(&p.buf, _data)
+	//	copy(data, _data)
+	//fmt.Printf("len:%d\r\n", 1920)
+	return _len, nil
 }
 
 // Close 关闭管道

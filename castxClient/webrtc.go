@@ -17,6 +17,7 @@ import (
 	"github.com/dosgo/libopus/opus"
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media/h264writer"
+	"github.com/pion/webrtc/v4/pkg/media/oggwriter"
 )
 
 func (client *CastXClient) initWebRtc() error {
@@ -82,6 +83,7 @@ func (client *CastXClient) initWebRtc() error {
 					//
 					var resampler = opusComm.NewSpeexResampler(2, sampleRate, 44100, 10)
 					last := time.Now()
+					ogg, _ := oggwriter.New("test.ogg", 48000, 2)
 					for {
 						rtpPacket, _, err := track.ReadRTP()
 
@@ -91,7 +93,7 @@ func (client *CastXClient) initWebRtc() error {
 							break
 						}
 						i++
-
+						ogg.WriteRTP(rtpPacket)
 						//跳过第一个包  AOPUSHD
 						if IsOpusHead(rtpPacket.Payload) {
 							// 2. 将长度前缀转换为uint32

@@ -23,7 +23,7 @@ func NewPlayer(reader io.Reader) *Player {
 		SampleRate:   48000,
 		ChannelCount: 2,
 		Format:       oto.FormatSignedInt16LE,
-		BufferSize:   48000 * 10,
+		BufferSize:   2400,
 	})
 	if err != nil {
 		panic("oto.NewContext failed: " + err.Error())

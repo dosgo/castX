@@ -2,26 +2,21 @@ package castxClient
 
 import (
 	"bytes"
-	"container/ring"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/dosgo/castX/comm"
-	opusComm "github.com/dosgo/libopus/comm"
 	"github.com/dosgo/libopus/opus"
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media/h264writer"
-	"github.com/pion/webrtc/v4/pkg/media/oggwriter"
 )
 
 func (client *CastXClient) initWebRtc() error {
-	var isResampler = false
 	config := webrtc.Configuration{}
 	//	depacketizer := NewH264Depacketizer(client)
 
@@ -64,33 +59,22 @@ func (client *CastXClient) initWebRtc() error {
 
 			go func() {
 				ioBuf := NewBufferedPipe(1024 * 1024 * 5)
-
-				//xx := NewStringReader()
-				//var buf bytes.Buffer
 				player := NewPlayer(ioBuf)
 
 				const sampleRate = 48000
-				decoder, _ := opus.NewOpusDecoder(sampleRate, 2)
+				const channels = 2
+				decoder, _ := opus.NewOpusDecoder(sampleRate, channels)
 
 				pcmData := make([]int16, 1024*2)
 
 				go func() {
-					//one := true
 					i := 0
-					//
-					var resampler = opusComm.NewSpeexResampler(2, sampleRate, 44100, 10)
-					last := time.Now()
-					ogg, _ := oggwriter.New("test.ogg", 48000, 2)
 					for {
 						rtpPacket, _, err := track.ReadRTP()
-
-						fmt.Printf("SequenceNumber:%d len:%d audio recv:%+v \r\n", rtpPacket.SequenceNumber, len(rtpPacket.Payload), time.Since(last))
-						last = time.Now()
 						if err != nil {
 							break
 						}
 						i++
-						ogg.WriteRTP(rtpPacket)
 						//跳过第一个包  AOPUSHD
 						if IsOpusHead(rtpPacket.Payload) {
 							// 2. 将长度前缀转换为uint32
@@ -102,25 +86,14 @@ func (client *CastXClient) initWebRtc() error {
 							continue
 						}
 
-						AppendFile("testnew.opus", rtpPacket.Payload, 0644, true)
-
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, 960*2, false)
-
+						outLen = outLen * channels
 						//	fmt.Printf("len(rtpPacket.Payload):%d\r\n", len(rtpPacket.Payload))
 						if err != nil {
 							fmt.Printf("errr1111:%+v\r\n", err)
 						}
-
-						var inputLen = outLen
-						data_packet := make([]int16, 960*2)
-						var outLen1 = len(data_packet)
-						if isResampler {
-							resampler.ProcessShort(0, pcmData[:outLen], 0, &inputLen, data_packet, 0, &outLen1)
-							ioBuf.Write(ManualWriteInt16(data_packet[:outLen1]))
-						} else {
-							ddd := ManualWriteInt16(pcmData[:outLen])
-							ioBuf.Write(ddd)
-						}
+						ddd := ManualWriteInt16(pcmData[:outLen])
+						ioBuf.Write(ddd)
 					}
 				}()
 				// 3. 开始播放
@@ -269,7 +242,6 @@ func NewBufferedPipe(bufferSize int) *BufferedPipe {
 func (p *BufferedPipe) Write(data []byte) (int, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	//AppendFile("test.pcm", data, 0664, false)
 	return p.buf.Write(data)
 }
 
@@ -277,12 +249,8 @@ func (p *BufferedPipe) Write(data []byte) (int, error) {
 func (p *BufferedPipe) Read(data []byte) (int, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	//_data := make([]byte, 1920)
 	readLen := min(1920, len(data))
 	_len, _ := p.buf.Read(data[:readLen])
-	//io.ReadFull(&p.buf, _data)
-	//	copy(data, _data)
-	//fmt.Printf("len:%d\r\n", 1920)
 	return _len, nil
 }
 
@@ -299,76 +267,4 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-type ringBuf struct {
-	queue      *ring.Ring // 环形缓冲区（线程安全）
-	queueMutex sync.Mutex
-}
-
-func (ap *ringBuf) Write(pcmData []byte) {
-	ap.queueMutex.Lock()
-	defer ap.queueMutex.Unlock()
-
-	for _, b := range pcmData {
-		ap.queue.Value = b
-		ap.queue = ap.queue.Next()
-	}
-}
-
-func (ap *ringBuf) Read(buf []byte) {
-	ap.queueMutex.Lock()
-	// 检查是否有足够的数据
-	if ap.queue.Len() >= len(buf) {
-		// 从环形缓冲区取出数据
-		for i := 0; i < len(buf); i++ {
-			buf[i] = ap.queue.Value.(byte)
-			ap.queue = ap.queue.Next()
-		}
-		ap.queueMutex.Unlock()
-
-	} else {
-		ap.queueMutex.Unlock()
-		// 数据不足，插入静音（或PLC算法）
-		for i := range buf {
-			buf[i] = 0 // 静音（0x00）
-		}
-
-	}
-
-}
-
-// 动态调整缓冲区水位
-func (ap *ringBuf) bufferMonitor() {
-
-	const (
-		sampleRate      = 48000 // 采样率（Hz）
-		channels        = 1     // 单声道
-		bitDepth        = 2     // 16-bit PCM（2字节）
-		targetBufferMs  = 200   // 目标缓冲200ms
-		minBufferMs     = 50    // 最低缓冲警戒线
-		maxBufferMs     = 500   // 最高缓冲警戒线
-		framesPerBuffer = 1024  // 每次回调请求的帧数
-	)
-	time.Sleep(100 * time.Millisecond) // 每100ms检查一次
-	ap.queueMutex.Lock()
-	currentBufferMs := (ap.queue.Len() * 1000) / (sampleRate * bitDepth)
-	ap.queueMutex.Unlock()
-
-	switch {
-	case currentBufferMs < minBufferMs:
-		log.Printf("⚠️ 缓冲区过低 (%dms)，网络可能跟不上！", currentBufferMs)
-		// 策略：轻微降速（需要时间伸缩算法，如SoundTouch）
-
-	case currentBufferMs > maxBufferMs:
-		log.Printf("⚠️ 缓冲区过长 (%dms)，丢弃部分数据降低延迟！", currentBufferMs)
-		// 丢弃部分数据
-		ap.queueMutex.Lock()
-		bytesToRemove := ap.queue.Len() - (targetBufferMs * sampleRate * bitDepth / 1000)
-		for i := 0; i < bytesToRemove; i++ {
-			ap.queue = ap.queue.Next()
-		}
-		ap.queueMutex.Unlock()
-	}
-
 }

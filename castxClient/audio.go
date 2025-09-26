@@ -9,8 +9,6 @@ import (
 	"github.com/gopxl/beep/v2/speaker"
 )
 
-//https://github.com/jfreymuth/pulse
-
 // Player 简单的Opus音频播放器
 type Player struct {
 	reader io.Reader

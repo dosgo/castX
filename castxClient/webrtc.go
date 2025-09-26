@@ -8,7 +8,6 @@ import (
 	"math"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/dosgo/castX/comm"
 	"github.com/dosgo/libopus/opus"
@@ -61,8 +60,8 @@ func (client *CastXClient) initWebRtc() error {
 				ioBuf := NewBufferedPipe(1024 * 1024 * 5)
 				player := NewPlayer(ioBuf)
 
-				const sampleRate = 48000
-				const channels = 2
+				var sampleRate = 48000
+				var channels = 2
 				decoder, _ := opus.NewOpusDecoder(sampleRate, channels)
 
 				pcmData := make([]int16, 1024*2)
@@ -97,7 +96,6 @@ func (client *CastXClient) initWebRtc() error {
 					}
 				}()
 				// 3. 开始播放
-				time.Sleep(time.Second * 2)
 				player.Play()
 			}()
 		}

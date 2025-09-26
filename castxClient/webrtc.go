@@ -51,11 +51,8 @@ func (client *CastXClient) initWebRtc() error {
 
 			go func() {
 				h264writer := h264writer.NewWith(client.stream)
-				//	last := time.Now()
 				for {
 					rtpPacket, _, err := track.ReadRTP()
-					//	fmt.Printf("len:%d  video recv:%+v \r\n", len(rtpPacket.Payload), time.Since(last))
-					//		last = time.Now()
 					if err != nil {
 						break
 					}
@@ -105,7 +102,7 @@ func (client *CastXClient) initWebRtc() error {
 							continue
 						}
 
-						//	AppendFile("testnew.opus", rtpPacket.Payload, 0644, true)
+						AppendFile("testnew.opus", rtpPacket.Payload, 0644, true)
 
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, 960*2, false)
 
@@ -113,8 +110,6 @@ func (client *CastXClient) initWebRtc() error {
 						if err != nil {
 							fmt.Printf("errr1111:%+v\r\n", err)
 						}
-						//	fmt.Printf("outLen:%d\r\n", outLen)
-						//fmt.Printf("pcmData[:outLen]:%+v\r\n", pcmData[:outLen])
 
 						var inputLen = outLen
 						data_packet := make([]int16, 960*2)
@@ -123,20 +118,13 @@ func (client *CastXClient) initWebRtc() error {
 							resampler.ProcessShort(0, pcmData[:outLen], 0, &inputLen, data_packet, 0, &outLen1)
 							ioBuf.Write(ManualWriteInt16(data_packet[:outLen1]))
 						} else {
-							//tmp := processMultiband(pcmData[:outLen], 48000)
-							//	tmp := applyGain(pcmData[:outLen], 0.7)
-
-							//slow := LinearInterpolateInt16(pcmData[:outLen], 0.95)
-							//fmt.Printf("slow len:%d len:%d\r\n ", outLen, len(slow))
-							////fmt.Printf("slow:%+v\r\n", slow)
 							ddd := ManualWriteInt16(pcmData[:outLen])
 							ioBuf.Write(ddd)
-
 						}
 					}
 				}()
 				// 3. 开始播放
-				time.Sleep(time.Second * 10)
+				time.Sleep(time.Second * 2)
 				player.Play()
 			}()
 		}

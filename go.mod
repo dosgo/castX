@@ -7,7 +7,6 @@ require (
 	github.com/ebitengine/oto/v3 v3.3.3
 	github.com/go-vgo/robotgo v0.110.7
 	github.com/gopxl/beep/v2 v2.1.1
-	github.com/gopxl/pixel v1.0.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
 	github.com/jupiterrider/purego-sdl3 v0.0.0-20250708183231-2c5a07454892
@@ -16,7 +15,7 @@ require (
 	github.com/sunaipa5/libvlcPurego v0.1.0
 	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/wlynxg/anet v0.0.5
-	golang.org/x/image v0.26.0
+	golang.org/x/image v0.26.0 // indirect
 	golang.org/x/mobile v0.0.0-20250408133729-978277e7eaf7
 )
 
@@ -24,7 +23,11 @@ require (
 	codeberg.org/gruf/go-ffmpreg v0.6.12
 	github.com/abemedia/go-webview v0.0.0-20250327021345-7b06ad397f16
 	github.com/dosgo/libopus v0.0.0-20250917151524-ee76c7bd8181
+	github.com/ebitengine/purego v0.8.3
+	github.com/moonfdd/ffmpeg-go v0.0.0-20240925083614-afd889cdf7fa
 	github.com/tetratelabs/wazero v1.9.0
+	github.com/y9o/go-openh264 v0.2.0
+	golang.org/x/sys v0.33.0
 )
 
 require (
@@ -34,13 +37,7 @@ require (
 	github.com/dosgo/spake2-go v0.0.0-20241019170010-3b8be66d26f7 // indirect
 	github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
-	github.com/ebitengine/purego v0.8.3 // indirect
-	github.com/faiface/glhf v0.0.0-20211013000516-57b20770c369 // indirect
-	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3 // indirect
 	github.com/gen2brain/shm v0.1.1 // indirect
-	github.com/go-gl/gl v0.0.0-20231021071112-07e5d0ea2e71 // indirect
-	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20240506104042-037f3cc74f2a // indirect
-	github.com/go-gl/mathgl v1.1.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -81,13 +78,13 @@ require (
 	github.com/vcaesar/imgo v0.40.2 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/vcaesar/tt v0.20.1 // indirect
+	github.com/ying32/dylib v0.0.0-20220227124818-fdf9ea9fbc96 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

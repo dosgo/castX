@@ -126,7 +126,7 @@ func (m *H264Decoder) Write(buffer []byte) (n int, err error) {
 		select {
 		case m.outputDataChan <- buf: // 尝试发送数据
 			// 发送成功
-		default:
+		case <-time.After(1 * time.Millisecond):
 			// 通道满，丢弃数据
 			// 这里可以添加日志记录或其他处理逻辑
 		}

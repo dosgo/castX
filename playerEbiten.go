@@ -174,7 +174,7 @@ func main() {
 		player.SetParam(client.Width, client.Height, 30)
 	})
 
-	client.Start("ws://172.30.16.83:8081/ws", "666666", 1920)
+	client.Start("ws://192.168.221.147:8081/ws", "666666", 1920)
 
 	// 创建Ebiten游戏
 	game := &Game{

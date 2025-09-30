@@ -123,7 +123,13 @@ func (ff *H264Decoder) RecvOutput() ([]byte, error) {
 func (m *H264Decoder) Write(buffer []byte) (n int, err error) {
 	buf, err := m.DecodeFrame(buffer)
 	if err == nil {
-		m.outputDataChan <- buf
+		select {
+		case m.outputDataChan <- buf: // 尝试发送数据
+			// 发送成功
+		default:
+			// 通道满，丢弃数据
+			// 这里可以添加日志记录或其他处理逻辑
+		}
 	}
 	return len(buffer), nil
 }
@@ -175,6 +181,12 @@ func (d *H264Decoder) YUV420PToRGBA(yuvData []byte) []byte {
 	w := int(d.width)
 	h := int(d.height)
 
+	// 检查数据长度
+	expectedYUVSize := w * h * 3 / 2 // YUV420P格式
+	if len(yuvData) < expectedYUVSize {
+		return nil
+	}
+
 	// 提取YUV平面
 	ySize := w * h
 	uSize := (w / 2) * (h / 2)
@@ -186,41 +198,58 @@ func (d *H264Decoder) YUV420PToRGBA(yuvData []byte) []byte {
 	// 创建RGBA数据缓冲区
 	rgbaData := make([]byte, w*h*4)
 
-	// 转换每个像素
+	// 使用整数运算提高性能
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			// 计算索引
 			yIdx := y*w + x
-			uvIdx := (y/2)*(w/2) + (x / 2)
+			uvY := y / 2
+			uvX := x / 2
+			uvIdx := uvY*(w/2) + uvX
 
-			// 获取YUV值
-			Y := float64(yData[yIdx])
-			U := float64(uData[uvIdx]) - 128
-			V := float64(vData[uvIdx]) - 128
+			// 确保UV索引不越界
+			if uvIdx >= len(uData) || uvIdx >= len(vData) {
+				continue
+			}
 
-			// YUV到RGB转换 (ITU-R BT.601)
-			R := clamp(Y + 1.402*V)
-			G := clamp(Y - 0.344*U - 0.714*V)
-			B := clamp(Y + 1.772*U)
+			// 获取YUV值（使用整数运算提高性能）
+			Y := int(yData[yIdx])
+			U := int(uData[uvIdx])
+			V := int(vData[uvIdx])
+
+			// 调整YUV范围（从有限范围到全范围）
+			Y = (Y - 16) * 256 / 219 // Y: 16-235 -> 0-255
+			U = U - 128              // U: 16-240 -> -112 to 112
+			V = V - 128              // V: 16-240 -> -112 to 112
+
+			// YUV到RGB转换 (ITU-R BT.601) - 整数版本
+			R := (Y + 359*V/256)            // 1.402 * 256 ≈ 359
+			G := (Y - 88*U/256 - 183*V/256) // 0.344 * 256≈88, 0.714 * 256≈183
+			B := (Y + 454*U/256)            // 1.772 * 256≈454
+
+			// 钳制值到0-255范围
+			R = clampInt(R, 0, 255)
+			G = clampInt(G, 0, 255)
+			B = clampInt(B, 0, 255)
 
 			// 设置RGBA像素
 			rgbaIdx := yIdx * 4
 			rgbaData[rgbaIdx] = uint8(R)   // R
 			rgbaData[rgbaIdx+1] = uint8(G) // G
 			rgbaData[rgbaIdx+2] = uint8(B) // B
-			rgbaData[rgbaIdx+3] = 255      // A (完全不透明)
+			rgbaData[rgbaIdx+3] = 255      // A
 		}
 	}
 
 	return rgbaData
 }
 
-func clamp(value float64) float64 {
-	if value < 0 {
-		return 0
+func clampInt(value, min, max int) int {
+	if value < min {
+		return min
 	}
-	if value > 255 {
-		return 255
+	if value > max {
+		return max
 	}
 	return value
 }

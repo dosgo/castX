@@ -43,16 +43,16 @@ func (p *H264Player) GetFrame() {
 	if !p.running {
 		return
 	}
-
-	tempFrameBuffer, err := p.ffmpeg.RecvOutput()
-	frameBuffer := p.ffmpeg.YUV420PToRGBA(tempFrameBuffer)
-	if err != nil || len(frameBuffer) < p.width*p.height*4 || len(frameBuffer) == 0 {
-		return
-	}
 	p.frameMutex.Lock()
 	defer p.frameMutex.Unlock()
+	tempFrameBuffer, err := p.ffmpeg.RecvOutput()
+	frameBuffer := p.ffmpeg.YUV420PToRGBA(tempFrameBuffer)
+	if err != nil || len(frameBuffer) < p.width*p.height*4 || len(tempFrameBuffer) == 0 {
+		return
+	}
 	// 零拷贝创建RGB24图像
 	if p.currentImg == nil || p.currentImg.Bounds().Dx() != p.width || p.currentImg.Bounds().Dy() != p.height {
+		p.currentImg = nil
 		p.currentImg = ebiten.NewImage(p.width, p.height)
 	}
 
@@ -75,7 +75,6 @@ type Game struct {
 func (g *Game) Update() error {
 	// 获取新帧
 	g.player.GetFrame()
-
 	// 处理触摸/鼠标事件
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
@@ -119,26 +118,25 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) sendTouchEvent(eventType string, duration ...int) {
-	dur := 0
-	if len(duration) > 0 {
-		dur = duration[0]
-	}
-
-	args := map[string]interface{}{
-		"x":           g.currentTouchPos.X,
-		"y":           g.player.height - g.currentTouchPos.Y,
-		"type":        eventType,
-		"duration":    dur,
-		"videoWidth":  g.player.width,
-		"videoHeight": g.player.height,
-	}
-	argsStr, _ := json.Marshal(args)
-	g.client.WsClient.SendCmd(comm.MsgTypeControl, string(argsStr))
+	go func() {
+		dur := 0
+		if len(duration) > 0 {
+			dur = duration[0]
+		}
+		args := map[string]interface{}{
+			"x":           g.currentTouchPos.X,
+			"y":           g.player.height - g.currentTouchPos.Y,
+			"type":        eventType,
+			"duration":    dur,
+			"videoWidth":  g.player.width,
+			"videoHeight": g.player.height,
+		}
+		argsStr, _ := json.Marshal(args)
+		g.client.WsClient.SendCmd(comm.MsgTypeControl, string(argsStr))
+	}()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.player.frameMutex.Lock()
-	defer g.player.frameMutex.Unlock()
 	// 渲染当前帧
 	if g.player.currentImg != nil {
 		screen.DrawImage(g.player.currentImg, nil)
@@ -194,6 +192,8 @@ func main() {
 	}
 }
 func (p *H264Player) SetParam(width int, height int, framerate float64) {
+	p.frameMutex.Lock()
+	defer p.frameMutex.Unlock()
 	p.width = width
 	p.height = height
 	p.framerate = framerate

@@ -7,6 +7,7 @@ import (
 
 	"github.com/dosgo/castX/castxServer"
 	"github.com/dosgo/castX/comm"
+
 	"github.com/go-vgo/robotgo"
 	"github.com/kbinani/screenshot"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
@@ -85,8 +86,7 @@ func ffmpegAudio(port int, webrtcServer *comm.WebrtcServer) {
 		ffmpeg.KwArgs{
 			"f":           "dshow",
 			"sample_rate": "48000",
-
-			"channels": "2",
+			"channels":    "2",
 		}).Output(fmt.Sprintf("tcp://127.0.0.1:%d?listen", port),
 		ffmpeg.KwArgs{
 			"acodec":        "libopus",

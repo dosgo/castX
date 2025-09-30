@@ -248,7 +248,12 @@ func main() {
 		if _width, ok := data["videoWidth"].(float64); ok {
 			client.Width = int(_width)
 		}
-		player.SetParam(client.Width, client.Height, 30)
+		fmt.Printf("dddd:%d\r\n")
+		width := client.Width
+		height := client.Height
+
+		fmt.Printf("width:%d, height:%d\r\n", width, height)
+		player.SetParam(width, height, 30)
 	})
 	client.Start("ws://172.30.16.83:8081/ws", "666666", 1920)
 	// 创建SDL播放器
@@ -263,4 +268,15 @@ func (p *H264Player) SetParam(width int, height int, framerate float64) {
 	p.height = height
 	// YUV420p帧大小: w*h + (w/2 * h/2) * 2 = w*h*1.5
 	p.framerate = framerate
+}
+
+func (p *H264Player) reset(width int, height int, framerate float64) {
+	if client.Width > 1920 {
+		width = 1920
+		height = int(1920 / float64(client.Width) * 1080)
+	}
+	if client.Height > 1080 {
+		height = 1080
+		width = int(1080 / float64(client.Height) * 1920)
+	}
 }

@@ -125,7 +125,7 @@ func (g *Game) sendTouchEvent(eventType string, duration ...int) {
 		}
 		args := map[string]interface{}{
 			"x":           g.currentTouchPos.X,
-			"y":           g.player.height - g.currentTouchPos.Y,
+			"y":           g.currentTouchPos.Y,
 			"type":        eventType,
 			"duration":    dur,
 			"videoWidth":  g.player.width,

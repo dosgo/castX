@@ -19,7 +19,7 @@ type FfmpegIo struct {
 }
 
 func NewFfmpegIo() *FfmpegIo {
-	ffmpegIo := &FfmpegIo{running: true, outputDataChan: make(chan []byte, 1)}
+	ffmpegIo := &FfmpegIo{running: true, outputDataChan: make(chan []byte, 5)}
 	ffmpegIo.input, _ = net.Listen("tcp", "127.0.0.1:0")
 	ffmpegIo.output, _ = net.Listen("tcp", "127.0.0.1:0")
 	go ffmpegIo.acceptIo(ffmpegIo.input, true)

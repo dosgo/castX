@@ -2,39 +2,30 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"image"
 	"log"
 	"math"
-	"os/exec"
-	"time"
 
 	"github.com/dosgo/castX/castxClient"
-	"github.com/dosgo/castX/castxClient/ffmpegapi"
 	"github.com/dosgo/castX/comm"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 type H264Player struct {
-	framerate   float64
-	width       int
-	height      int
-	running     bool
-	videoFfmpeg *exec.Cmd
-	inputPort   int
-	outputPort  int
-	ffmpegIo    *ffmpegapi.FfmpegIo
-	currentImg  *ebiten.Image // 直接存储Ebiten图像
+	framerate  float64
+	width      int
+	height     int
+	ffmpeg     *castxClient.H264Decoder
+	running    bool
+	currentImg *ebiten.Image // 直接存储Ebiten图像
 }
 
-func NewH264Player(ffmpegIo *ffmpegapi.FfmpegIo) (*H264Player, error) {
+func NewH264Player(ffmpegApi *castxClient.H264Decoder) (*H264Player, error) {
 	player := &H264Player{
-		inputPort:  ffmpegIo.GetPort(true),
-		outputPort: ffmpegIo.GetPort(false),
-		running:    true,
-		ffmpegIo:   ffmpegIo,
+
+		running: true,
+		ffmpeg:  ffmpegApi,
 	}
 
 	if player.width == 0 || player.height == 0 {
@@ -47,36 +38,13 @@ func NewH264Player(ffmpegIo *ffmpegapi.FfmpegIo) (*H264Player, error) {
 	return player, nil
 }
 
-func (p *H264Player) SetParam(width int, height int, framerate float64) {
-	p.width = width
-	p.height = height
-	p.ffmpegIo.SetFrameSize(p.width * p.height * 4) // RGB24: 3字节/像素
-	p.framerate = framerate
-}
-
-func (p *H264Player) startNewFFmpeg() {
-	p.videoFfmpeg = ffmpeg.Input(fmt.Sprintf("tcp://127.0.0.1:%d", p.inputPort),
-		ffmpeg.KwArgs{"f": "h264"}).
-		Filter("scale", ffmpeg.Args{fmt.Sprintf("%d:%d", p.width, p.height)}).
-		Output(fmt.Sprintf("tcp://127.0.0.1:%d", p.outputPort),
-			ffmpeg.KwArgs{
-				"format":    "rawvideo",
-				"pix_fmt":   "rgba", // 关键修改：使用RGB24格式
-				"flags":     "low_delay",
-				"avioflags": "direct",
-			}).Compile()
-
-	if err := p.videoFfmpeg.Start(); err != nil {
-		log.Printf("启动FFmpeg失败: %v", err)
-	}
-}
-
 func (p *H264Player) GetFrame() {
 	if !p.running {
 		return
 	}
 
-	frameBuffer, err := p.ffmpegIo.RecvOutput()
+	tempFrameBuffer, err := p.ffmpeg.RecvOutput()
+	frameBuffer := p.ffmpeg.YUV420PToRGBA(tempFrameBuffer)
 	if err != nil || len(frameBuffer) < p.width*p.height*4 {
 		return
 	}
@@ -92,14 +60,6 @@ func (p *H264Player) GetFrame() {
 
 func (p *H264Player) Close() {
 	p.running = false
-}
-
-func (p *H264Player) RebootFfmpeg() {
-	if p.videoFfmpeg != nil {
-		p.videoFfmpeg.Process.Kill()
-	}
-	time.Sleep(time.Millisecond * 500)
-	go p.startNewFFmpeg()
 }
 
 // Ebiten游戏结构
@@ -193,14 +153,14 @@ var player *H264Player
 var client *castxClient.CastXClient
 
 func main() {
-	videoffmpegIo := ffmpegapi.NewFfmpegIo()
 	var err error
-	player, err = NewH264Player(videoffmpegIo)
+	decoder, err := castxClient.NewH264Decoder()
+	player, err = NewH264Player(decoder)
 	if err != nil {
 		log.Fatal(err)
 	}
 	client = castxClient.NewCastXClient()
-	client.SetStream(videoffmpegIo)
+	client.SetStream(decoder)
 
 	client.WsClient.SetInfoNotifyFun(func(data map[string]interface{}) {
 		if _height, ok := data["videoHeight"].(float64); ok {
@@ -209,13 +169,10 @@ func main() {
 		if _width, ok := data["videoWidth"].(float64); ok {
 			client.Width = int(_width)
 		}
-		if player != nil {
-			player.SetParam(client.Width, client.Height, 30)
-			go player.RebootFfmpeg()
-		}
+		player.SetParam(client.Width, client.Height, 30)
 	})
 
-	client.Start("ws://172.30.17.78:8081/ws", "666666", 1920)
+	client.Start("ws://172.30.16.83:8081/ws", "666666", 1920)
 
 	// 创建Ebiten游戏
 	game := &Game{
@@ -231,4 +188,9 @@ func main() {
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
 	}
+}
+func (p *H264Player) SetParam(width int, height int, framerate float64) {
+	p.width = width
+	p.height = height
+	p.framerate = framerate
 }

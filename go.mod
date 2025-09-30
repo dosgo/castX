@@ -23,8 +23,8 @@ require (
 	codeberg.org/gruf/go-ffmpreg v0.6.12
 	github.com/abemedia/go-webview v0.0.0-20250327021345-7b06ad397f16
 	github.com/dosgo/libopus v0.0.0-20250917151524-ee76c7bd8181
+	github.com/dwdcth/ffmpeg-go/v7 v7.0.0-20240725095241-adbb813b7b28
 	github.com/ebitengine/purego v0.8.3
-	github.com/moonfdd/ffmpeg-go v0.0.0-20240925083614-afd889cdf7fa
 	github.com/tetratelabs/wazero v1.9.0
 	github.com/y9o/go-openh264 v0.2.0
 	golang.org/x/sys v0.33.0
@@ -78,7 +78,6 @@ require (
 	github.com/vcaesar/imgo v0.40.2 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/vcaesar/tt v0.20.1 // indirect
-	github.com/ying32/dylib v0.0.0-20220227124818-fdf9ea9fbc96 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f // indirect

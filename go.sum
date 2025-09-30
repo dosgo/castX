@@ -20,6 +20,8 @@ github.com/dosgo/libopus v0.0.0-20250917151524-ee76c7bd8181 h1:0iGgE2okgDfq306EY
 github.com/dosgo/libopus v0.0.0-20250917151524-ee76c7bd8181/go.mod h1:/mcWRks3r8UuAwAEsifqAXrj45vp2R1OFIXYyoyw16E=
 github.com/dosgo/spake2-go v0.0.0-20241019170010-3b8be66d26f7 h1:BwlYEjA/y6gyCSRyhEVeLZ7HxnB0krs/2+TaG4bGjjs=
 github.com/dosgo/spake2-go v0.0.0-20241019170010-3b8be66d26f7/go.mod h1:orsUSpRyx/wXpYlpvaRz70nJ49+kLQCd2gP3JVfamD8=
+github.com/dwdcth/ffmpeg-go/v7 v7.0.0-20240725095241-adbb813b7b28 h1:AhA7pom74alF5ik5z6qgx20KiKmZ0sir/8GkLZitSUM=
+github.com/dwdcth/ffmpeg-go/v7 v7.0.0-20240725095241-adbb813b7b28/go.mod h1:pWXo+5M1qKOlQQQFcNAaM0lkhd+Zw6HjSKwepy5AE+8=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 h1:Gk1XUEttOk0/hb6Tq3WkmutWa0ZLhNn/6fc6XZpM7tM=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325/go.mod h1:ulhSQcbPioQrallSuIzF8l1NKQoD7xmMZc5NxzibUMY=
 github.com/ebitengine/hideconsole v1.0.0 h1:5J4U0kXF+pv/DhiXt5/lTz0eO5ogJ1iXb8Yj1yReDqE=
@@ -78,8 +80,6 @@ github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJ
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
-github.com/moonfdd/ffmpeg-go v0.0.0-20240925083614-afd889cdf7fa h1:xc8csIP67JKQatBuziffsJBAPEaWz5/fHR58AXtp3/w=
-github.com/moonfdd/ffmpeg-go v0.0.0-20240925083614-afd889cdf7fa/go.mod h1:QG6o6CUIRcYUpl9WqRalTdYdiiCu1zVI34W0TMrJ2E4=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 h1:zYyBkD/k9seD2A7fsi6Oo2LfFZAehjjQMERAvZLEDnQ=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
 github.com/otiai10/gosseract v2.2.1+incompatible h1:Ry5ltVdpdp4LAa2bMjsSJH34XHVOV7XMi41HtzL8X2I=
@@ -168,8 +168,6 @@ github.com/wlynxg/anet v0.0.5 h1:J3VJGi1gvo0JwZ/P1/Yc/8p63SoW98B5dHkYDmpgvvU=
 github.com/wlynxg/anet v0.0.5/go.mod h1:eay5PRQr7fIVAMbTbchTnO9gG65Hg/uYGdc7mguHxoA=
 github.com/y9o/go-openh264 v0.2.0 h1:HdGN57MSKeTYlMZPEOVG+Wzp/YmTOM5/BU+6Ux4GSWU=
 github.com/y9o/go-openh264 v0.2.0/go.mod h1:G3Bd6P0V70cnlmPFf2D2eE6nuOp0KzmOD7m7f7k5orA=
-github.com/ying32/dylib v0.0.0-20220227124818-fdf9ea9fbc96 h1:+kU/yXSAQPL4G7OQOxz/j62GdM+G5yd5J1/NNm7u3QI=
-github.com/ying32/dylib v0.0.0-20220227124818-fdf9ea9fbc96/go.mod h1:WPBTfbqg/aA1xqHFPB4fgBHETq/G/75yErbnexmaEOo=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 gocv.io/x/gocv v0.25.0/go.mod h1:Rar2PS6DV+T4FL+PM535EImD/h13hGVaHhnCu1xarBs=

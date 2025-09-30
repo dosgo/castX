@@ -5,6 +5,7 @@ import (
 	"image"
 	"log"
 	"math"
+	"sync"
 
 	"github.com/dosgo/castX/castxClient"
 	"github.com/dosgo/castX/comm"
@@ -18,12 +19,12 @@ type H264Player struct {
 	height     int
 	ffmpeg     *castxClient.H264Decoder
 	running    bool
+	frameMutex sync.Mutex
 	currentImg *ebiten.Image // 直接存储Ebiten图像
 }
 
 func NewH264Player(ffmpegApi *castxClient.H264Decoder) (*H264Player, error) {
 	player := &H264Player{
-
 		running: true,
 		ffmpeg:  ffmpegApi,
 	}
@@ -45,10 +46,11 @@ func (p *H264Player) GetFrame() {
 
 	tempFrameBuffer, err := p.ffmpeg.RecvOutput()
 	frameBuffer := p.ffmpeg.YUV420PToRGBA(tempFrameBuffer)
-	if err != nil || len(frameBuffer) < p.width*p.height*4 {
+	if err != nil || len(frameBuffer) < p.width*p.height*4 || len(frameBuffer) == 0 {
 		return
 	}
-
+	p.frameMutex.Lock()
+	defer p.frameMutex.Unlock()
 	// 零拷贝创建RGB24图像
 	if p.currentImg == nil || p.currentImg.Bounds().Dx() != p.width || p.currentImg.Bounds().Dy() != p.height {
 		p.currentImg = ebiten.NewImage(p.width, p.height)
@@ -135,6 +137,8 @@ func (g *Game) sendTouchEvent(eventType string, duration ...int) {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	g.player.frameMutex.Lock()
+	defer g.player.frameMutex.Unlock()
 	// 渲染当前帧
 	if g.player.currentImg != nil {
 		screen.DrawImage(g.player.currentImg, nil)

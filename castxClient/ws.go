@@ -15,12 +15,14 @@ import (
 
 type WsClient struct {
 	wsConn         *comm.WsSafeConn
+	sendList       chan comm.WSMessage
 	isAuth         bool
 	securityKey    string
 	run            bool
 	LoginCall      func(map[string]interface{}) //登录回调
 	OfferRespCall  func(map[string]interface{}) //offer回调
 	InfoNotifyCall func(map[string]interface{}) //信息通知回调
+
 }
 
 func (client *WsClient) Conect(wsUrl string, password string, maxSize int) int {
@@ -30,6 +32,8 @@ func (client *WsClient) Conect(wsUrl string, password string, maxSize int) int {
 		return 0
 	}
 	client.wsConn = comm.NewWsSafeConn(conn)
+	client.sendList = make(chan comm.WSMessage, 50)
+	go client.WsSend()
 	// 消息接收协程
 	go client.WsRecv(password, maxSize)
 	return 0
@@ -63,6 +67,17 @@ func (client *WsClient) login(password string, maxSize int) {
 		Type: comm.MsgTypeLoginAuth,
 		Data: string(argsStr),
 	})
+}
+
+func (client *WsClient) WsSend() {
+	for {
+		data := <-client.sendList
+		err := client.wsConn.WriteJSON(data)
+		if err != nil {
+			log.Println("read error:", err)
+			return
+		}
+	}
 }
 func (client *WsClient) WsRecv(password string, maxSize int) {
 	var msg comm.WSMessage
@@ -110,9 +125,16 @@ func (client *WsClient) SetInfoNotifyFun(_infoNotifyCall func(map[string]interfa
 
 func (client *WsClient) SendCmd(cmd string, args string) {
 	if client.wsConn != nil {
-		client.wsConn.WriteJSON(comm.WSMessage{
+		msg := comm.WSMessage{
 			Type: cmd,
 			Data: args,
-		})
+		}
+		select {
+		case client.sendList <- msg: // 尝试发送数据
+			// 发送成功
+		case <-time.After(1 * time.Millisecond):
+			// 通道满，丢弃数据
+			// 这里可以添加日志记录或其他处理逻辑
+		}
 	}
 }

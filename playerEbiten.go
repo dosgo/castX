@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"image"
 	"log"
 	"math"
@@ -126,22 +127,23 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) sendTouchEvent(eventType string, duration ...int) {
-	go func() {
-		dur := 0
-		if len(duration) > 0 {
-			dur = duration[0]
-		}
-		args := map[string]interface{}{
-			"x":           g.currentTouchPos.X,
-			"y":           g.currentTouchPos.Y,
-			"type":        eventType,
-			"duration":    dur,
-			"videoWidth":  g.player.width,
-			"videoHeight": g.player.height,
-		}
-		argsStr, _ := json.Marshal(args)
-		g.client.WsClient.SendCmd(comm.MsgTypeControl, string(argsStr))
-	}()
+
+	dur := 0
+	if len(duration) > 0 {
+		dur = duration[0]
+	}
+	args := map[string]interface{}{
+		"x":           g.currentTouchPos.X,
+		"y":           g.currentTouchPos.Y,
+		"type":        eventType,
+		"duration":    dur,
+		"videoWidth":  g.player.width,
+		"videoHeight": g.player.height,
+	}
+	argsStr, _ := json.Marshal(args)
+	fmt.Printf("argsStr:%s\r\n", argsStr)
+	g.client.WsClient.SendCmd(comm.MsgTypeControl, string(argsStr))
+
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {

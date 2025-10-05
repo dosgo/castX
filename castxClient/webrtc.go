@@ -179,14 +179,6 @@ func AppendFile(filename string, data []byte, perm os.FileMode, isLen bool) erro
 	return err
 }
 
-// 辅助函数
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 type BoundedBuffer struct {
 	buf       *bytes.Buffer
 	maxSize   int

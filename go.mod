@@ -12,8 +12,6 @@ require (
 	github.com/jupiterrider/purego-sdl3 v0.0.0-20250708183231-2c5a07454892
 	github.com/kbinani/screenshot v0.0.0-20250118074034-a3924b7bbc8c
 	github.com/pion/webrtc/v4 v4.1.3
-	github.com/sunaipa5/libvlcPurego v0.1.0
-	github.com/u2takey/ffmpeg-go v0.5.0
 	github.com/wlynxg/anet v0.0.5
 	golang.org/x/image v0.26.0 // indirect
 	golang.org/x/mobile v0.0.0-20250408133729-978277e7eaf7
@@ -22,12 +20,10 @@ require (
 require (
 	codeberg.org/gruf/go-ffmpreg v0.6.12
 	github.com/abemedia/go-webview v0.0.0-20250327021345-7b06ad397f16
-	github.com/dosgo/libopus v0.0.0-20250917151524-ee76c7bd8181
+	github.com/dosgo/libopus v0.0.0-20250926174001-ab4c5823676f
 	github.com/dwdcth/ffmpeg-go/v7 v7.0.0-20240725095241-adbb813b7b28
-	github.com/ebitengine/purego v0.8.3
 	github.com/tetratelabs/wazero v1.9.0
-	github.com/y9o/go-openh264 v0.2.0
-	golang.org/x/sys v0.33.0
+	github.com/u2takey/ffmpeg-go v0.5.0
 )
 
 require (
@@ -37,6 +33,7 @@ require (
 	github.com/dosgo/spake2-go v0.0.0-20241019170010-3b8be66d26f7 // indirect
 	github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
+	github.com/ebitengine/purego v0.8.3 // indirect
 	github.com/gen2brain/shm v0.1.1 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -84,6 +81,7 @@ require (
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

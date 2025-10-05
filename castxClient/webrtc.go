@@ -56,7 +56,8 @@ func (client *CastXClient) initWebRtc() error {
 		if track.Codec().MimeType == "audio/opus" {
 
 			go func() {
-				ioBuf := NewBufferedPipe(1024 * 1024)
+				//ioBuf := NewBufferedPipe(1024 * 1024)
+				ioBuf := NewBoundedBuffer(1024 * 1024)
 				player := NewPlayer(ioBuf)
 
 				var sampleRate = 48000
@@ -219,4 +220,60 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+type BoundedBuffer struct {
+	buf       *bytes.Buffer
+	maxSize   int
+	mu        sync.Mutex
+	writeCond *sync.Cond // 用于阻塞写入
+}
+
+func NewBoundedBuffer(maxSize int) *BoundedBuffer {
+	b := &BoundedBuffer{
+		buf:     bytes.NewBuffer(nil),
+		maxSize: maxSize,
+	}
+	b.writeCond = sync.NewCond(&b.mu)
+	return b
+}
+
+// Write 实现 io.Writer (丢弃旧数据)
+func (b *BoundedBuffer) Write(p []byte) (n int, err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	// 丢弃最旧数据直到有足够空间
+	for b.buf.Len()+len(p) > b.maxSize {
+		dropSize := b.buf.Len() + len(p) - b.maxSize
+		if dropSize > b.buf.Len() {
+			b.buf.Reset()
+		} else {
+			b.buf.Next(dropSize)
+		}
+	}
+
+	n, err = b.buf.Write(p)
+	b.writeCond.Broadcast() // 通知等待的Reader
+	return
+}
+
+// Read 实现 io.Reader
+func (b *BoundedBuffer) Read(p []byte) (n int, err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	// 无数据时阻塞（可选）
+	for b.buf.Len() == 0 {
+		b.writeCond.Wait()
+	}
+
+	return b.buf.Read(p)
+}
+
+// Len 获取当前数据量
+func (b *BoundedBuffer) Len() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Len()
 }

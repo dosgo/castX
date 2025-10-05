@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -21,23 +22,23 @@ func (client *CastXClient) initWebRtc() error {
 	// 创建PeerConnection
 	client.peerConnection, err = webrtc.NewPeerConnection(config)
 	if err != nil {
-		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
+		log.Printf("StartWebRtcReceive err:%+v\n", err)
 		return err
 	}
 	if _, err = client.peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
-		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
+		log.Printf("StartWebRtcReceive err:%+v\n", err)
 		return err
 	}
 	if _, err = client.peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
-		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
+		log.Printf("StartWebRtcReceive err:%+v\n", err)
 		return err
 	}
 	// 设置视频轨道处理
 
 	client.peerConnection.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-		fmt.Printf("接收到 %s 轨道\n", track.Kind())
+		log.Printf("接收到 %s 轨道\n", track.Kind())
 		// 创建内存缓冲区
-		fmt.Printf("开始接收轨道: %s\n", track.Codec().MimeType)
+		log.Printf("开始接收轨道: %s\n", track.Codec().MimeType)
 
 		if track.Codec().MimeType == "video/H264" {
 
@@ -61,9 +62,7 @@ func (client *CastXClient) initWebRtc() error {
 				var sampleRate = 48000
 				var channels = 2
 				decoder, _ := opus.NewOpusDecoder(sampleRate, channels)
-
 				pcmData := make([]int16, 1024*2)
-
 				go func() {
 					i := 0
 					for {
@@ -78,19 +77,17 @@ func (client *CastXClient) initWebRtc() error {
 							length := binary.LittleEndian.Uint64(rtpPacket.Payload[8:16])
 							//one = false
 							opHead := comm.ParseOpusHead(rtpPacket.Payload[16 : 16+length])
-							fmt.Printf("rtpPacket.Payload:%+v\r\n", rtpPacket.Payload)
-							fmt.Printf("opus head:%+v\r\n", opHead)
+							log.Printf("rtpPacket.Payload:%+v\r\n", rtpPacket.Payload)
+							log.Printf("opus head:%+v\r\n", opHead)
 							continue
 						}
 
 						outLen, err := decoder.Decode(rtpPacket.Payload, 0, len(rtpPacket.Payload), pcmData, 0, 960*2, false)
 						outLen = outLen * channels
-						//	fmt.Printf("len(rtpPacket.Payload):%d\r\n", len(rtpPacket.Payload))
 						if err != nil {
-							fmt.Printf("errr1111:%+v\r\n", err)
+							log.Printf("err:%+v\r\n", err)
 						}
-						ddd := ManualWriteInt16(pcmData[:outLen])
-						ioBuf.Write(ddd)
+						ioBuf.Write(ManualWriteInt16(pcmData[:outLen]))
 					}
 				}()
 				// 3. 开始播放
@@ -161,7 +158,7 @@ func (client *CastXClient) SetRemoteDescription(data map[string]interface{}) {
 	json.NewDecoder(bytes.NewBuffer([]byte(answerStr))).Decode(&answer)
 	// 设置远程描述
 	if err := client.peerConnection.SetRemoteDescription(answer); err != nil {
-		fmt.Printf("StartWebRtcReceive err:%+v\n", err)
+		log.Printf("StartWebRtcReceive err:%+v\n", err)
 	}
 }
 

@@ -3,6 +3,7 @@ package castxClient
 import (
 	"fmt"
 	"io"
+	"log"
 	"time"
 
 	"github.com/ebitengine/oto/v3"
@@ -23,10 +24,10 @@ func NewPlayer(reader io.Reader) *Player {
 		SampleRate:   48000,
 		ChannelCount: 2,
 		Format:       oto.FormatSignedInt16LE,
-		BufferSize:   2400,
+		BufferSize:   1920 * 2,
 	})
 	if err != nil {
-		panic("oto.NewContext failed: " + err.Error())
+		log.Panic("oto.NewContext failed: " + err.Error())
 	}
 
 	// 等待音频设备准备就绪

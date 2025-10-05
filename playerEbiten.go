@@ -7,6 +7,9 @@ import (
 	"math"
 	"sync"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/dosgo/castX/castxClient"
 	"github.com/dosgo/castX/comm"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,6 +22,7 @@ type H264Player struct {
 	width      int
 	height     int
 	ffmpeg     *castxClient.H264Decoder
+	yuv2Rgba   *castxClient.YUVConverter
 	running    bool
 	frameMutex sync.Mutex
 	currentImg *ebiten.Image // 直接存储Ebiten图像
@@ -29,7 +33,7 @@ func NewH264Player(ffmpegApi *castxClient.H264Decoder) (*H264Player, error) {
 		running: true,
 		ffmpeg:  ffmpegApi,
 	}
-
+	player.yuv2Rgba = castxClient.NewYUVConverter()
 	if player.width == 0 || player.height == 0 {
 		player.width, player.height = 1920, 1080
 	}
@@ -47,7 +51,10 @@ func (p *H264Player) GetFrame() {
 	p.frameMutex.Lock()
 	defer p.frameMutex.Unlock()
 	tempFrameBuffer, err := p.ffmpeg.RecvOutput()
-	frameBuffer := p.ffmpeg.YUV420PToRGBA(tempFrameBuffer)
+	frameWidth, frameHeight := p.ffmpeg.GetResolution()
+	//frameBuffer := p.ffmpeg.YUV420PToRGBA(tempFrameBuffer)
+
+	frameBuffer := player.yuv2Rgba.ConvertYUV420PToRGBA(tempFrameBuffer, int(frameWidth), int(frameHeight))
 	if err != nil || len(frameBuffer) < p.width*p.height*4 || len(tempFrameBuffer) == 0 {
 		return
 	}
@@ -157,6 +164,9 @@ var client *castxClient.CastXClient
 var width, height int
 
 func main() {
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
 	bounds := screenshot.GetDisplayBounds(0)
 	width = bounds.Dx()
 	height = bounds.Dy()

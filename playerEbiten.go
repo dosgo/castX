@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"image"
 	"log"
 	"math"
@@ -141,7 +140,6 @@ func (g *Game) sendTouchEvent(eventType string, duration ...int) {
 		"videoHeight": g.player.height,
 	}
 	argsStr, _ := json.Marshal(args)
-	fmt.Printf("argsStr:%s\r\n", argsStr)
 	g.client.WsClient.SendCmd(comm.MsgTypeControl, string(argsStr))
 
 }

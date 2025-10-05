@@ -56,7 +56,7 @@ func (client *CastXClient) initWebRtc() error {
 		if track.Codec().MimeType == "audio/opus" {
 
 			go func() {
-				ioBuf := NewBufferedPipe(1024 * 1024 * 5)
+				ioBuf := NewBufferedPipe(1024 * 1024)
 				player := NewPlayer(ioBuf)
 
 				var sampleRate = 48000

@@ -11,6 +11,7 @@ import (
 	"github.com/dosgo/castX/comm"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/kbinani/screenshot"
 )
 
 type H264Player struct {
@@ -148,13 +149,17 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	if g.player.width > 0 && g.player.height > 0 {
 		return g.player.width, g.player.height
 	}
-	return 1920, 1080
+	return width, height
 }
 
 var player *H264Player
 var client *castxClient.CastXClient
+var width, height int
 
 func main() {
+	bounds := screenshot.GetDisplayBounds(0)
+	width = bounds.Dx()
+	height = bounds.Dy()
 	var err error
 	decoder, err := castxClient.NewH264Decoder()
 	player, err = NewH264Player(decoder)
@@ -174,7 +179,7 @@ func main() {
 		player.SetParam(client.Width, client.Height, 30)
 	})
 
-	client.Start("ws://192.168.221.147:8081/ws", "666666", 1920)
+	client.Start("ws://192.168.171.147:8081/ws", "666666", 1920)
 
 	// 创建Ebiten游戏
 	game := &Game{
@@ -184,7 +189,7 @@ func main() {
 
 	// 设置窗口
 	ebiten.SetWindowTitle("FFmpeg H.264 播放器 (Ebiten)")
-	ebiten.SetWindowSize(1920, 1080)
+	ebiten.SetWindowSize(width, height)
 	ebiten.SetWindowResizable(true)
 
 	if err := ebiten.RunGame(game); err != nil {

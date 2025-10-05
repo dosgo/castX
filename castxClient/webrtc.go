@@ -179,41 +179,6 @@ func AppendFile(filename string, data []byte, perm os.FileMode, isLen bool) erro
 	return err
 }
 
-// BufferedPipe 带缓冲的非阻塞管道
-type BufferedPipe struct {
-	buf bytes.Buffer
-	mu  sync.Mutex // 互斥锁
-}
-
-// NewBufferedPipe 创建新的带缓冲管道
-func NewBufferedPipe(bufferSize int) *BufferedPipe {
-	p := &BufferedPipe{}
-	return p
-}
-
-// Write 写入数据到管道（非阻塞）
-func (p *BufferedPipe) Write(data []byte) (int, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return p.buf.Write(data)
-}
-
-// Read 从管道读取数据（非阻塞）
-func (p *BufferedPipe) Read(data []byte) (int, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	readLen := min(1920, len(data))
-	_len, _ := p.buf.Read(data[:readLen])
-	return _len, nil
-}
-
-// Close 关闭管道
-func (p *BufferedPipe) Close() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return nil
-}
-
 // 辅助函数
 func min(a, b int) int {
 	if a < b {

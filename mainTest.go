@@ -132,7 +132,7 @@ func ffmpegDesktop() {
 	ffcommon.SetAvpostprocPath("postproc-58.dll")
 	ffcommon.SetAvswresamplePath("swresample-5.dll")
 	ffcommon.SetAvswscalePath("swscale-8.dll")
-
+	ffcommon.GetAvutilDll()
 	// 注册所有设备
 	libavdevice.AvdeviceRegisterAll()
 

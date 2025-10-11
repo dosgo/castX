@@ -22,6 +22,8 @@ require (
 	github.com/abemedia/go-webview v0.0.0-20250327021345-7b06ad397f16
 	github.com/dosgo/libopus v0.0.0-20250926174001-ab4c5823676f
 	github.com/dwdcth/ffmpeg-go/v7 v7.0.0-20240725095241-adbb813b7b28
+	github.com/moonfdd/ffmpeg-go v0.0.0-20240925083614-afd889cdf7fa
+	github.com/moonfdd/sdl2-go v0.0.0-20240925022729-4397b45d52f5
 	github.com/tetratelabs/wazero v1.9.0
 	github.com/u2takey/ffmpeg-go v0.5.0
 )
@@ -75,6 +77,7 @@ require (
 	github.com/vcaesar/imgo v0.40.2 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/vcaesar/tt v0.20.1 // indirect
+	github.com/ying32/dylib v0.0.0-20220227124818-fdf9ea9fbc96 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f // indirect

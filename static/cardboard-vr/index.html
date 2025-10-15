@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<!-- saved from url=(0062)https://immersive-web.github.io/cardboard-vr-display/examples/ -->
+<html lang="zh-CN" class="translated-ltr">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Cardboard VR显示演示</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, shrink-to-fit=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #fff;
+            margin: 0px;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+        }
+        
+        #buttons {
+            position: fixed;
+            top: 0;
+            right: 0;
+            z-index: 1;
+            background: white;
+        }
+    </style>
+    <link type="text/css" rel="stylesheet" charset="UTF-8" href="./el_main_css">
+</head>
+
+<body>
+
+    <div id="buttons">
+        <button id="fullscreen"><font dir="auto" style="vertical-align: inherit;"><font dir="auto" style="vertical-align: inherit;">全屏</font></font></button>
+        <button id="vr"><font dir="auto" style="vertical-align: inherit;"><font dir="auto" style="vertical-align: inherit;">VR（仅限 WebVR/移动设备）</font></font></button>
+        <button id="reset"><font dir="auto" style="vertical-align: inherit;"><font dir="auto" style="vertical-align: inherit;">重置</font></font></button>
+    </div>
+
+
+
+    <script>
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        });
+    </script>
+
+    <!-- three.js library -->
+    <script src="./three.js"></script>
+
+    <!-- VRControls.js applies the WebVR transformations to a three.js camera object. -->
+    <script src="./VRControls.js"></script>
+
+    <!-- VREffect.js handles stereo camera setup and rendering.  -->
+    <script src="./VREffect.js"></script>
+
+    <script src="./cardboard-vr-display.js"></script>
+
+
+    <script>
+        // Get config from URL
+        var config = (function() {
+            var config = {};
+            var q = window.location.search.substring(1);
+            if (q === '') {
+                return config;
+            }
+            var params = q.split('&');
+            var param, name, value;
+            for (var i = 0; i < params.length; i++) {
+                param = params[i].split('=');
+                name = param[0];
+                value = param[1];
+
+                // All config values are either boolean or float
+                config[name] = value === 'true' ? true :
+                    value === 'false' ? false :
+                    parseFloat(value);
+            }
+            return config;
+        })();
+
+        // Mock VRFrameData for VRControls
+        function VRFrameData() {
+            this.leftViewMatrix = new Float32Array(16);
+            this.rightViewMatrix = new Float32Array(16);
+            this.leftProjectionMatrix = new Float32Array(16);
+            this.rightProjectionMatrix = new Float32Array(16);
+            this.pose = null;
+        };
+
+        console.log('creating CardboardVRDisplay with options', config);
+        var vrDisplay = new CardboardVRDisplay(config);
+
+        // If loading this inside of an iframe (see iframe.html),
+        // force using the `devicemotion` sensor fusion, rather than
+        // newer Generic Sensors due to an issue with sensors
+        // in iframes in Chrome < m69:
+        // https://bugs.chromium.org/p/chromium/issues/detail?id=849501
+        if (window.self !== window.top) {
+            vrDisplay.poseSensor_.useDeviceMotion();
+        }
+
+        navigator.getVRDisplays = function() {
+            return new Promise(function(resolve) {
+                resolve([vrDisplay]);
+            });
+        };
+
+
+        // Setup three.js WebGL renderer. Note: Antialiasing is a big performance hit.
+        // Only enable it if you actually need to.
+        var renderer = new THREE.WebGLRenderer({
+            antialias: false
+        });
+        renderer.setPixelRatio(Math.floor(window.devicePixelRatio));
+
+        // Append the canvas element created by the renderer to document body element.
+        document.body.appendChild(renderer.domElement);
+
+        // Create a three.js scene.
+        var scene = new THREE.Scene();
+
+        // Create a three.js camera.
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+
+        // Create a reticle
+        var reticle = new THREE.Mesh(
+            new THREE.RingBufferGeometry(0.005, 0.01, 15),
+            new THREE.MeshBasicMaterial({
+                color: 0xffffff
+            })
+        );
+        reticle.position.z = -0.5;
+        camera.add(reticle);
+        scene.add(camera);
+
+        // Apply VR headset positional data to camera.
+        var controls = new THREE.VRControls(camera);
+
+        // Apply VR stereo rendering to renderer.
+        var effect = new THREE.VREffect(renderer);
+        effect.setSize(window.innerWidth, window.innerHeight);
+
+        // Add a repeating grid as a skybox.
+        var boxWidth = 5;
+        var loader = new THREE.TextureLoader();
+        loader.load('img/box.png', onTextureLoaded);
+
+        // Kick off the render loop.
+        vrDisplay.requestAnimationFrame(animate);
+
+        function onTextureLoaded(texture) {
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(boxWidth, boxWidth);
+
+            var geometry = new THREE.BoxGeometry(boxWidth, boxWidth, boxWidth);
+            var material = new THREE.MeshBasicMaterial({
+                map: texture,
+                color: 0x01BE00,
+                side: THREE.BackSide
+            });
+
+            var skybox = new THREE.Mesh(geometry, material);
+            scene.add(skybox);
+        }
+
+        // Create 3D objects.
+        /*
+        var geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+        var material = new THREE.MeshNormalMaterial();
+        var cube = new THREE.Mesh(geometry, material);
+        */
+
+
+        // 创建平面几何体
+           // 创建平面几何体 - 使用16:9比例 (1920×1080)
+        const aspectRatio = 1920 / 1080; // 16:9
+        const planeWidth = 3.2; // 宽度可以根据需要调整
+        const planeHeight = planeWidth / aspectRatio; // 根据比例计算高度
+        var planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight); // 宽度和高度可以根据需要调整
+
+        // 加载图片纹理
+        var textureLoader = new THREE.TextureLoader();
+        var planeTexture = textureLoader.load('/img/desktop.png');
+
+        // 创建使用纹理的材质，双面显示
+        var planeMaterial = new THREE.MeshBasicMaterial({ 
+            map: planeTexture,
+            side: THREE.DoubleSide  // 双面显示，避免在平面背面时不可见
+        });
+
+        var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+
+        // 将平面添加到场景中
+        scene.add(plane);
+
+        // 调整平面的位置，使其在相机前方
+        plane.position.z = -2;
+
+
+        // Request animation frame loop function
+        var lastRender = 0;
+
+        function animate(timestamp) {
+            var delta = Math.min(timestamp - lastRender, 500);
+            lastRender = timestamp;
+
+            // Apply rotation to cube mesh
+          //  cube.rotation.y += delta * 0.0006;
+
+            // Update VR headset position and apply to camera.
+            controls.update();
+
+            // Render the scene.
+            effect.render(scene, camera);
+
+            // Keep looping.
+            vrDisplay.requestAnimationFrame(animate);
+        }
+
+        function onResize() {
+            console.log('Resizing to %s x %s.', window.innerWidth, window.innerHeight);
+            effect.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        }
+
+        function onVRDisplayPresentChange() {
+            console.log('onVRDisplayPresentChange');
+            onResize();
+        }
+
+        // Resize the WebGL canvas when we resize and also when we change modes.
+        window.addEventListener('resize', onResize);
+        window.addEventListener('vrdisplaypresentchange', onVRDisplayPresentChange);
+
+        // Button click handlers.
+        document.querySelector('button#fullscreen').addEventListener('click', function() {
+            enterFullscreen(renderer.domElement);
+        });
+        document.querySelector('button#vr').addEventListener('click', function() {
+            vrDisplay.requestPresent([{
+                source: renderer.domElement
+            }]);
+        });
+        document.querySelector('button#reset').addEventListener('click', function() {
+            vrDisplay.resetPose();
+        });
+
+        function enterFullscreen(el) {
+            if (el.requestFullscreen) {
+                el.requestFullscreen();
+            } else if (el.mozRequestFullScreen) {
+                el.mozRequestFullScreen();
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen();
+            } else if (el.msRequestFullscreen) {
+                el.msRequestFullscreen();
+            }
+        }
+    </script><canvas width="1920" height="953" style="width: 1920px; height: 953px;"></canvas>
+    <div id="goog-gt-tt" class="VIpgJd-yAWNEb-L7lbkb skiptranslate" style="border-radius: 12px; margin: 0 0 0 -23px; padding: 0; font-family: &#39;Google Sans&#39;, Arial, sans-serif;" data-id="">
+        <div id="goog-gt-vt" class="VIpgJd-yAWNEb-hvhgNd">
+            <div class="VIpgJd-yAWNEb-hvhgNd-Ud7fr"><img src="./24px.svg" width="24" height="24" alt="">
+                <div class=" VIpgJd-yAWNEb-hvhgNd-IuizWc-i3jM8c " dir="ltr">原文</div>
+            </div>
+            <div class="VIpgJd-yAWNEb-hvhgNd-k77Iif">
+                <div id="goog-gt-original-text" class="VIpgJd-yAWNEb-nVMfcd-fmcmS VIpgJd-yAWNEb-hvhgNd-axAV1"></div>
+            </div>
+            <div class="VIpgJd-yAWNEb-hvhgNd-N7Eqid ltr">
+                <div class="VIpgJd-yAWNEb-hvhgNd-N7Eqid-B7I4Od ltr" dir="ltr">
+                    <div class="VIpgJd-yAWNEb-hvhgNd-UTujCb">请对此翻译评分</div>
+                    <div class="VIpgJd-yAWNEb-hvhgNd-eO9mKe">您的反馈将用于改进谷歌翻译</div>
+                </div>
+                <div class="VIpgJd-yAWNEb-hvhgNd-xgov5 ltr"><button id="goog-gt-thumbUpButton" type="button" class="VIpgJd-yAWNEb-hvhgNd-bgm6sf" title="翻译质量很棒" aria-label="翻译质量很棒" aria-pressed="false"><span id="goog-gt-thumbUpIcon"><svg width="24" height="24" viewBox="0 0 24 24" focusable="false" class="VIpgJd-yAWNEb-hvhgNd-THI6Vb NMm5M"><path d="M21 7h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 0S7.08 6.85 7 7H2v13h16c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73V9c0-1.1-.9-2-2-2zM7 18H4V9h3v9zm14-7l-3 7H9V8l4.34-4.34L12 9h9v2z"></path></svg></span><span id="goog-gt-thumbUpIconFilled"><svg width="24" height="24" viewBox="0 0 24 24" focusable="false" class="VIpgJd-yAWNEb-hvhgNd-THI6Vb NMm5M"><path d="M21 7h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 0S7.08 6.85 7 7v13h11c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73V9c0-1.1-.9-2-2-2zM5 7H1v13h4V7z"></path></svg></span></button>
+                    <button id="goog-gt-thumbDownButton" type="button" class="VIpgJd-yAWNEb-hvhgNd-bgm6sf" title="翻译质量很差" aria-label="翻译质量很差" aria-pressed="false"><span id="goog-gt-thumbDownIcon"><svg width="24" height="24" viewBox="0 0 24 24" focusable="false" class="VIpgJd-yAWNEb-hvhgNd-THI6Vb NMm5M"><path d="M3 17h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 24s7.09-6.85 7.17-7h5V4H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2zM17 6h3v9h-3V6zM3 13l3-7h9v10l-4.34 4.34L12 15H3v-2z"></path></svg></span>
+                        <span id="goog-gt-thumbDownIconFilled"><svg width="24" height="24" viewBox="0 0 24 24" focusable="false" class="VIpgJd-yAWNEb-hvhgNd-THI6Vb NMm5M"><path d="M3 17h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 24s7.09-6.85 7.17-7V4H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2zm16 0h4V4h-4v13z"></path></svg></span>
+                    </button>
+                </div>
+            </div>
+            <div id="goog-gt-votingHiddenPane" class="VIpgJd-yAWNEb-hvhgNd-aXYTce">
+                <form id="goog-gt-votingForm" action="https://translate.googleapis.com/translate_voting?client=te_lib" method="post" target="votingFrame" class="VIpgJd-yAWNEb-hvhgNd-aXYTce"><input type="text" name="sl" id="goog-gt-votingInputSrcLang"><input type="text" name="tl" id="goog-gt-votingInputTrgLang"><input type="text" name="query" id="goog-gt-votingInputSrcText">
+                    <input type="text" name="gtrans" id="goog-gt-votingInputTrgText">
+                    <input type="text" name="vote" id="goog-gt-votingInputVote">
+                </form>
+                <iframe name="votingFrame" frameborder="0" src="./Cardboard VR显示演示_files/saved_resource.html"></iframe></div>
+        </div>
+    </div>
+
+
+</body>
+
+</html>

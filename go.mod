@@ -41,9 +41,12 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grandcat/zeroconf v1.0.0 // indirect
+	github.com/huin/asn1ber v0.0.0-20120622192748-af09f62e6358 // indirect
+	github.com/icodeface/tls v0.0.0-20190904083142-17aec93c60e5 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20240909124753-873cd0166683 // indirect
+	github.com/lunixbochs/struc v0.0.0-20200707160740-784aaebc1d40 // indirect
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/miekg/dns v1.1.27 // indirect
 	github.com/otiai10/gosseract v2.2.1+incompatible // indirect
@@ -68,10 +71,13 @@ require (
 	github.com/robotn/xgb v0.10.0 // indirect
 	github.com/robotn/xgbutil v0.10.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.1 // indirect
+	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/tailscale/win v0.0.0-20250213223159-5992cb43ca35 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.9.0 // indirect
+	github.com/tomatome/grdp v0.1.0 // indirect
+	github.com/tomatome/win v0.3.1 // indirect
 	github.com/u2takey/go-utils v0.3.1 // indirect
 	github.com/vcaesar/gops v0.40.0 // indirect
 	github.com/vcaesar/imgo v0.40.2 // indirect
